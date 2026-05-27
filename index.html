@@ -1,0 +1,1218 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chia Tiền Nhóm</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: #f5f5f5;
+    color: #1a1a1a;
+    min-height: 100vh;
+    padding: 24px 16px;
+  }
+
+  .app { max-width: 680px; margin: 0 auto; }
+
+  h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: 8px; color: #111; }
+  .subtitle { color: #666; font-size: 0.9rem; margin-bottom: 28px; }
+
+  /* Steps nav */
+  .steps { display:flex; gap:0; margin-bottom:28px; border-radius:10px; overflow:hidden; border:1px solid #e0e0e0; }
+  .step-btn { flex:1; padding:10px 4px; font-size:0.8rem; font-weight:600; background:#fff; border:none; cursor:pointer; color:#999; transition:background 0.15s,color 0.15s; border-right:1px solid #e0e0e0; }
+  .step-btn:last-child { border-right:none; }
+  .step-btn.active { background:#2563eb; color:#fff; }
+  .step-btn.done { background:#eff6ff; color:#2563eb; }
+
+  /* Card */
+  .card { background:#fff; border-radius:12px; border:1px solid #e5e7eb; padding:20px; margin-bottom:16px; }
+  .card-title { font-size:1rem; font-weight:700; margin-bottom:16px; color:#111; }
+
+  /* Form */
+  label { display:block; font-size:0.85rem; font-weight:600; color:#374151; margin-bottom:4px; }
+  input[type="text"], input[type="number"], input[type="date"], select {
+    width:100%; padding:8px 12px; border:1px solid #d1d5db; border-radius:8px;
+    font-size:0.9rem; color:#111; background:#fff; outline:none; transition:border-color 0.15s;
+  }
+  input:focus, select:focus { border-color:#2563eb; box-shadow:0 0 0 3px #eff6ff; }
+  input:disabled, select:disabled { background:#f9fafb; color:#9ca3af; cursor:not-allowed; }
+  .field { margin-bottom:14px; }
+  .row { display:flex; gap:10px; }
+  .row .field { flex:1; }
+
+  /* Buttons */
+  .btn { display:inline-flex; align-items:center; gap:6px; padding:8px 16px; border-radius:8px; font-size:0.875rem; font-weight:600; border:none; cursor:pointer; transition:opacity 0.15s,background 0.15s; }
+  .btn:hover { opacity:0.88; }
+  .btn:disabled { opacity:0.4; cursor:not-allowed; }
+  .btn-primary { background:#2563eb; color:#fff; }
+  .btn-secondary { background:#f3f4f6; color:#374151; border:1px solid #e5e7eb; }
+  .btn-danger { background:#fee2e2; color:#dc2626; }
+  .btn-success { background:#16a34a; color:#fff; }
+  .btn-sm { padding:4px 10px; font-size:0.78rem; border-radius:6px; }
+  .btn-full { width:100%; justify-content:center; padding:11px; }
+  .btn-ghost { background:none; border:none; padding:4px 8px; color:#6b7280; font-size:0.82rem; cursor:pointer; border-radius:6px; }
+  .btn-ghost:hover { background:#f3f4f6; color:#111; }
+
+  /* Tags */
+  .tags { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+  .tag { display:inline-flex; align-items:center; gap:6px; background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; border-radius:20px; padding:4px 12px; font-size:0.82rem; font-weight:600; }
+  .tag-remove { background:none; border:none; cursor:pointer; color:#93c5fd; font-size:1rem; line-height:1; padding:0; display:flex; align-items:center; }
+  .tag-remove:hover { color:#dc2626; }
+
+  /* Checkboxes */
+  .checkbox-group { display:flex; flex-wrap:wrap; gap:8px; margin-top:4px; }
+  .checkbox-item { display:flex; align-items:center; gap:6px; background:#f9fafb; border:1px solid #e5e7eb; border-radius:8px; padding:6px 10px; cursor:pointer; font-size:0.85rem; font-weight:500; user-select:none; transition:background 0.12s,border-color 0.12s; }
+  .checkbox-item input { accent-color:#2563eb; width:15px; height:15px; cursor:pointer; }
+  .checkbox-item:has(input:checked) { background:#eff6ff; border-color:#93c5fd; color:#1d4ed8; }
+
+  /* Payers */
+  .payers-list { display:flex; flex-direction:column; gap:8px; margin-top:4px; }
+  .payer-row { display:flex; gap:8px; align-items:center; }
+  .payer-row select { flex:1.2; }
+  .payer-row input { flex:1; }
+  .payer-remove { background:none; border:none; cursor:pointer; color:#9ca3af; font-size:1.1rem; padding:4px; border-radius:4px; flex-shrink:0; }
+  .payer-remove:hover { color:#dc2626; background:#fee2e2; }
+
+  /* Expense list */
+  .expense-item { border:1px solid #e5e7eb; border-radius:8px; padding:9px 12px; margin-bottom:6px; background:#fafafa; }
+  .expense-header { display:flex; justify-content:space-between; align-items:center; gap:8px; }
+  .expense-name { font-weight:700; font-size:0.88rem; }
+  .expense-amount { font-weight:700; color:#2563eb; font-size:0.88rem; white-space:nowrap; }
+  .expense-meta { font-size:0.75rem; color:#6b7280; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+  /* Info / Warning */
+  .info-box { background:#eff6ff; border:1px solid #bfdbfe; color:#1d4ed8; border-radius:8px; padding:10px 14px; font-size:0.83rem; margin-top:8px; line-height:1.5; }
+  .warning { background:#fffbeb; border:1px solid #fcd34d; color:#92400e; border-radius:8px; padding:10px 14px; font-size:0.83rem; margin-top:8px; }
+
+  /* Badges */
+  .badge { display:inline-block; padding:2px 8px; border-radius:20px; font-size:0.75rem; font-weight:700; }
+  .badge-positive { background:#dcfce7; color:#16a34a; }
+  .badge-negative { background:#fee2e2; color:#dc2626; }
+  .badge-zero { background:#f3f4f6; color:#6b7280; }
+  .badge-prepay { background:#fef9c3; color:#854d0e; border:1px solid #fde68a; }
+
+  /* Results */
+  .result-table { width:100%; border-collapse:collapse; font-size:0.88rem; }
+  .result-table th { text-align:left; padding:8px 12px; background:#f9fafb; font-size:0.78rem; font-weight:700; color:#6b7280; text-transform:uppercase; letter-spacing:0.05em; border-bottom:1px solid #e5e7eb; }
+  .result-table td { padding:10px 12px; border-bottom:1px solid #f3f4f6; }
+  .result-table tr:last-child td { border-bottom:none; }
+
+  /* Summary bar */
+  .summary-bar { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:16px; }
+  .summary-item { flex:1; min-width:130px; background:#f9fafb; border:1px solid #e5e7eb; border-radius:10px; padding:12px 14px; }
+  .summary-item .s-label { font-size:0.75rem; color:#6b7280; font-weight:600; text-transform:uppercase; margin-bottom:4px; }
+  .summary-item .s-value { font-size:1.1rem; font-weight:700; }
+
+  /* Suggested transactions */
+  .txn-row { display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid #f3f4f6; font-size:0.9rem; }
+  .txn-row:last-child { border-bottom:none; }
+  .txn-index { width:22px; height:22px; border-radius:50%; background:#e0e7ff; color:#4338ca; font-size:0.72rem; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .txn-arrow { color:#9ca3af; font-size:1.1rem; flex-shrink:0; }
+  .txn-amount { font-weight:700; color:#2563eb; margin-left:auto; white-space:nowrap; }
+  .suggestion-alt { margin-top:14px; padding:10px 14px; background:#fffbeb; border:1px solid #fcd34d; border-radius:8px; font-size:0.83rem; color:#78350f; line-height:1.6; }
+  .suggestion-alt strong { color:#92400e; }
+
+  /* Misc */
+  .empty { text-align:center; color:#9ca3af; padding:20px; font-size:0.88rem; }
+  .nav-actions { display:flex; gap:10px; justify-content:flex-end; margin-top:16px; }
+  .divider { height:1px; background:#e5e7eb; margin:16px 0; }
+  .input-row { display:flex; gap:8px; }
+  .input-row input { flex:1; }
+
+  /* ── Dashboard ─────────────────────────────────────────── */
+  .dash-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; }
+  .dash-header h1 { margin-bottom:0; }
+
+  .trip-card {
+    background:#fff; border-radius:12px; border:1px solid #e5e7eb;
+    padding:16px 18px; margin-bottom:12px;
+    transition:box-shadow 0.15s;
+  }
+  .trip-card:hover { box-shadow:0 2px 8px rgba(0,0,0,0.07); }
+  .trip-card-top { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
+  .trip-card-name { font-weight:700; font-size:1rem; color:#111; }
+  .trip-card-stats { font-size:0.78rem; color:#6b7280; margin-top:4px; }
+  .trip-card-actions { display:flex; gap:6px; flex-wrap:wrap; margin-top:10px; }
+
+  /* ── Trip header ────────────────────────────────────────── */
+  .trip-header {
+    display:flex; justify-content:space-between; align-items:center;
+    margin-bottom:20px; gap:10px; flex-wrap:wrap;
+  }
+  .trip-header-left { display:flex; align-items:center; gap:10px; min-width:0; }
+  .trip-name-display { font-size:1.15rem; font-weight:700; color:#111; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .save-indicator { font-size:0.78rem; color:#9ca3af; white-space:nowrap; }
+  .save-indicator.saving { color:#f59e0b; }
+  .save-indicator.saved  { color:#16a34a; }
+  .trip-header-right { display:flex; gap:6px; align-items:center; flex-shrink:0; }
+
+  /* Share popover */
+  .share-popover-wrap { position:relative; }
+  .share-popover {
+    position:absolute; right:0; top:calc(100% + 6px);
+    background:#fff; border:1px solid #e5e7eb; border-radius:10px;
+    padding:14px; width:340px; z-index:100;
+    box-shadow:0 4px 16px rgba(0,0,0,0.1);
+  }
+  .share-row { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+  .share-row:last-child { margin-bottom:0; }
+  .share-label { font-size:0.78rem; font-weight:600; color:#374151; white-space:nowrap; width:70px; flex-shrink:0; }
+  .share-url { font-size:0.72rem; color:#6b7280; background:#f9fafb; border:1px solid #e5e7eb; border-radius:6px; padding:4px 8px; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .copied-flash { color:#16a34a; font-size:0.75rem; font-weight:600; }
+
+  /* View-only banner */
+  .view-banner { background:#fffbeb; border:1px solid #fcd34d; border-radius:10px; padding:10px 16px; font-size:0.85rem; color:#78350f; font-weight:600; margin-bottom:16px; text-align:center; }
+
+  /* Modal */
+  .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:200; display:flex; align-items:center; justify-content:center; padding:16px; }
+  .modal-box { background:#fff; border-radius:14px; padding:24px; width:100%; max-width:380px; }
+  .modal-title { font-size:1.1rem; font-weight:700; margin-bottom:16px; }
+  .modal-actions { display:flex; gap:10px; justify-content:flex-end; margin-top:16px; }
+
+  /* Loading / Error / Setup */
+  .center-page { display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:60vh; text-align:center; gap:12px; }
+  .center-page h2 { font-size:1.2rem; font-weight:700; }
+  .center-page p { font-size:0.9rem; color:#6b7280; max-width:420px; line-height:1.6; }
+  .setup-steps { text-align:left; background:#fff; border:1px solid #e5e7eb; border-radius:10px; padding:16px 20px; max-width:480px; font-size:0.85rem; line-height:2; }
+  .setup-steps code { background:#f3f4f6; border-radius:4px; padding:1px 5px; font-family:monospace; font-size:0.82rem; }
+  .spinner { width:32px; height:32px; border:3px solid #e5e7eb; border-top-color:#2563eb; border-radius:50%; animation:spin 0.7s linear infinite; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+
+  @media (max-width:480px) {
+    .row { flex-direction:column; }
+    .summary-bar { flex-direction:column; }
+    .result-table th:nth-child(2), .result-table td:nth-child(2) { display:none; }
+    .result-table th:nth-child(3), .result-table td:nth-child(3) { display:none; }
+    .share-popover { width:calc(100vw - 32px); right:-16px; }
+    .trip-header { flex-direction:column; align-items:flex-start; }
+  }
+</style>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+</head>
+<body>
+
+<!-- ══ LOADING ══════════════════════════════════════════════════════════ -->
+<div id="view-loading" class="app">
+  <div class="center-page">
+    <div class="spinner"></div>
+    <p>Đang tải...</p>
+  </div>
+</div>
+
+<!-- ══ ERROR ════════════════════════════════════════════════════════════ -->
+<div id="view-error" class="app" style="display:none">
+  <div class="center-page">
+    <h2>Không thể mở chuyến đi</h2>
+    <p id="error-msg"></p>
+    <a href="?" class="btn btn-primary">← Về trang chủ</a>
+  </div>
+</div>
+
+<!-- ══ SETUP GUIDE ═══════════════════════════════════════════════════════ -->
+<div id="view-setup" class="app" style="display:none">
+  <div class="center-page">
+    <h2>Cần thiết lập Firebase</h2>
+    <p>App cần kết nối Firestore để lưu dữ liệu. Làm theo các bước sau rồi mở lại file:</p>
+    <div class="setup-steps">
+      <b>Bước 1</b> — Vào <a href="https://console.firebase.google.com" target="_blank">console.firebase.google.com</a> → Tạo project<br>
+      <b>Bước 2</b> — Firestore Database → Tạo (chọn <i>test mode</i>)<br>
+      <b>Bước 3</b> — Project Settings → General → <i>Your apps</i> → Add web app → Copy <code>firebaseConfig</code><br>
+      <b>Bước 4</b> — Mở <code>index.html</code>, tìm <code>FIREBASE_CONFIG</code> ở đầu script, dán config vào<br>
+      <b>Bước 5</b> — Tải lại trang
+    </div>
+  </div>
+</div>
+
+<!-- ══ DASHBOARD ═════════════════════════════════════════════════════════ -->
+<div id="view-dashboard" class="app" style="display:none">
+  <div class="dash-header">
+    <div>
+      <h1>Chia Tiền Nhóm</h1>
+      <p class="subtitle">Chọn chuyến đi hoặc tạo mới.</p>
+    </div>
+    <button class="btn btn-primary" onclick="openCreateModal()">+ Chuyến mới</button>
+  </div>
+  <div id="trip-list"></div>
+</div>
+
+<!-- ══ TRIP DETAIL ════════════════════════════════════════════════════════ -->
+<div id="view-trip" class="app" style="display:none">
+
+  <!-- Trip header -->
+  <div class="trip-header">
+    <div class="trip-header-left">
+      <a href="?" class="btn btn-ghost" title="Dashboard">←</a>
+      <span class="trip-name-display" id="trip-name-display"></span>
+      <span class="save-indicator" id="save-indicator"></span>
+    </div>
+    <div class="trip-header-right">
+      <div class="share-popover-wrap" id="share-wrap">
+        <button class="btn btn-secondary btn-sm" onclick="toggleSharePopover()" id="btn-share-trip">🔗 Chia sẻ</button>
+        <div class="share-popover" id="share-popover" style="display:none">
+          <div style="font-weight:700;font-size:0.85rem;margin-bottom:10px">Link chia sẻ</div>
+          <div class="share-row">
+            <span class="share-label">✏️ Chỉnh sửa</span>
+            <span class="share-url" id="share-edit-url"></span>
+            <button class="btn btn-secondary btn-sm" onclick="copyLink('edit')">Copy</button>
+          </div>
+          <div class="share-row">
+            <span class="share-label">👁 Chỉ xem</span>
+            <span class="share-url" id="share-view-url"></span>
+            <button class="btn btn-secondary btn-sm" onclick="copyLink('view')">Copy</button>
+          </div>
+          <div id="copy-flash" class="copied-flash" style="display:none;margin-top:6px"></div>
+        </div>
+      </div>
+      <button class="btn btn-secondary btn-sm" onclick="refreshTrip()" title="Tải lại">↺</button>
+    </div>
+  </div>
+
+  <!-- View-only banner -->
+  <div id="view-banner" class="view-banner" style="display:none">
+    👁 Chế độ xem — bạn không thể chỉnh sửa chuyến đi này
+  </div>
+
+  <!-- Steps nav -->
+  <div class="steps">
+    <button class="step-btn active" id="nav-1" onclick="goStep(1)">1. Thành viên</button>
+    <button class="step-btn" id="nav-2" onclick="goStep(2)">2. Khoản chi</button>
+    <button class="step-btn" id="nav-3" onclick="goStep(3)">3. Kết quả</button>
+  </div>
+
+  <!-- STEP 1 -->
+  <div id="step-1">
+    <div class="card">
+      <div class="card-title">Thành viên trong nhóm</div>
+      <div class="field" id="member-add-section">
+        <label>Tên thành viên</label>
+        <div class="input-row">
+          <input type="text" id="member-input" placeholder="Nhập tên rồi nhấn Thêm" maxlength="30"
+            onkeydown="if(event.key==='Enter') addMember()">
+          <button class="btn btn-primary" onclick="addMember()">Thêm</button>
+        </div>
+      </div>
+      <div id="member-tags" class="tags"></div>
+      <div id="member-hint" style="margin-top:10px; font-size:0.8rem; color:#9ca3af;">Cần ít nhất 2 thành viên.</div>
+    </div>
+    <div class="nav-actions">
+      <button class="btn btn-primary" id="btn-step1-next" onclick="goStep(2)" disabled>Tiếp theo →</button>
+    </div>
+  </div>
+
+  <!-- STEP 2 -->
+  <div id="step-2" style="display:none">
+    <div class="card" id="expense-form-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <div class="card-title" id="expense-form-title" style="margin-bottom:0">Thêm khoản chi</div>
+        <button class="btn btn-secondary btn-sm" id="btn-cancel-edit" onclick="cancelEdit()" style="display:none">Hủy sửa</button>
+      </div>
+      <div class="field">
+        <label>Loại khoản chi</label>
+        <select id="exp-type" onchange="onExpTypeChange()">
+          <option value="normal">Khoản chi thông thường</option>
+          <option value="prepay">Trả trước / Góp quỹ</option>
+        </select>
+        <div id="exp-type-info" class="info-box" style="display:none">
+          ℹ Khoản ứng trước / góp quỹ: tổng tiền có thể để 0 nếu chưa xác định, và số tiền đóng góp có thể vượt tổng. Phần dư sẽ được tính là tín dụng và hoàn lại sau.
+        </div>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label>Tên khoản chi</label>
+          <input type="text" id="exp-name" placeholder="Ví dụ: Tiền ăn, Tiền taxi..." maxlength="50">
+        </div>
+        <div class="field">
+          <label>Ngày</label>
+          <input type="date" id="exp-date">
+        </div>
+      </div>
+      <div class="field">
+        <label>Tổng tiền (VNĐ)</label>
+        <input type="text" id="exp-amount" placeholder="0" inputmode="numeric" oninput="formatInput(this)">
+      </div>
+      <div class="field">
+        <label>Người tham gia chia tiền</label>
+        <div id="exp-participants" class="checkbox-group"></div>
+      </div>
+      <div class="field">
+        <label>Người đã trả</label>
+        <div id="payers-list" class="payers-list"></div>
+        <button class="btn btn-secondary btn-sm" style="margin-top:8px" onclick="addPayerRow()">+ Thêm người trả</button>
+      </div>
+      <div id="payer-warning" class="warning" style="display:none"></div>
+      <div class="divider"></div>
+      <button class="btn btn-primary btn-full" id="btn-save-expense" onclick="addExpense()">Lưu khoản chi</button>
+    </div>
+
+    <div id="expense-list"></div>
+
+    <div class="nav-actions">
+      <button class="btn btn-secondary" onclick="goStep(1)">← Quay lại</button>
+      <button class="btn btn-success" id="btn-calc" onclick="calculate()" disabled>Tính toán</button>
+    </div>
+  </div>
+
+  <!-- STEP 3 -->
+  <div id="step-3" style="display:none">
+    <div class="summary-bar" id="summary-bar"></div>
+    <div class="card">
+      <div class="card-title">Kết quả</div>
+      <table class="result-table">
+        <thead>
+          <tr>
+            <th>Tên</th>
+            <th>Phần phải trả</th>
+            <th>Đã trả</th>
+            <th>Còn nợ / Được hoàn</th>
+          </tr>
+        </thead>
+        <tbody id="result-tbody"></tbody>
+      </table>
+    </div>
+    <div class="card" id="suggestion-card">
+      <div class="card-title">Giao dịch gợi ý</div>
+      <div id="suggestion-list"></div>
+      <div id="suggestion-alt" class="suggestion-alt" style="display:none"></div>
+    </div>
+    <div class="nav-actions">
+      <button class="btn btn-secondary" onclick="goStep(2)">← Sửa khoản chi</button>
+      <button class="btn btn-primary" onclick="exportToExcel()">⬇ Xuất Excel</button>
+    </div>
+  </div>
+
+</div><!-- end view-trip -->
+
+<!-- ══ CREATE MODAL ══════════════════════════════════════════════════════ -->
+<div id="modal-create" class="modal-overlay" style="display:none" onclick="closeModalOnBg(event)">
+  <div class="modal-box">
+    <div class="modal-title">Tạo chuyến đi mới</div>
+    <div class="field">
+      <label>Tên chuyến đi</label>
+      <input type="text" id="new-trip-name" placeholder="Ví dụ: Đà Lạt tháng 5, Sinh nhật An..." maxlength="60"
+        onkeydown="if(event.key==='Enter') confirmCreateTrip()">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeCreateModal()">Hủy</button>
+      <button class="btn btn-primary" id="btn-confirm-create" onclick="confirmCreateTrip()">Tạo →</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══ FIREBASE CONFIG ════════════════════════════════════════════════════
+// Hướng dẫn: Vào console.firebase.google.com → Tạo project → Firestore
+// → Project Settings → Copy firebaseConfig → Dán vào đây
+const FIREBASE_CONFIG = {
+  apiKey: "",
+  authDomain: "",
+  projectId: "",
+  storageBucket: "",
+  messagingSenderId: "",
+  appId: ""
+};
+
+// ══ STATE ═══════════════════════════════════════════════════════════════
+const state = {
+  members: [],
+  expenses: [],
+  editingId: null,
+  currentTripId: null,
+  currentMode: null,   // 'edit' | 'view'
+  currentTripName: '',
+  currentEditToken: null,
+  currentViewToken: null
+};
+
+let db = null;
+let saveTimer = null;
+const LS_KEY = 'chia-tien-v2-trips';
+
+// ══ VIEW HELPERS ════════════════════════════════════════════════════════
+function showView(name) {
+  ['loading','error','setup','dashboard','trip'].forEach(v => {
+    document.getElementById(`view-${v}`).style.display = v === name ? '' : 'none';
+  });
+}
+
+function showError(msg) {
+  document.getElementById('error-msg').textContent = msg;
+  showView('error');
+}
+
+// ══ APP INIT ════════════════════════════════════════════════════════════
+async function appInit() {
+  const cfg = FIREBASE_CONFIG;
+  const missing = !cfg.apiKey || !cfg.projectId;
+  if (missing) { showView('setup'); return; }
+
+  try {
+    firebase.initializeApp(cfg);
+    db = firebase.firestore();
+  } catch(e) {
+    showError('Không thể khởi tạo Firebase. Kiểm tra lại firebaseConfig.');
+    return;
+  }
+
+  const params = new URLSearchParams(location.search);
+  const tripId = params.get('trip');
+  const token  = params.get('token');
+
+  if (!tripId) { showDashboard(); return; }
+
+  try {
+    const doc = await db.collection('trips').doc(tripId).get();
+    if (!doc.exists) { showError('Không tìm thấy chuyến đi. Link có thể đã bị xóa.'); return; }
+    const data = doc.data();
+    if (token === data.editToken)      loadTrip(tripId, data, 'edit');
+    else if (token === data.viewToken) loadTrip(tripId, data, 'view');
+    else showError('Token không hợp lệ. Vui lòng xin lại link từ người tạo.');
+  } catch(e) {
+    showError('Không thể kết nối Firestore. Kiểm tra kết nối mạng và cấu hình Firebase.');
+  }
+}
+
+window.addEventListener('load', appInit);
+
+// ══ DASHBOARD ══════════════════════════════════════════════════════════
+function getLocalTrips() {
+  try { return JSON.parse(localStorage.getItem(LS_KEY) || '[]'); } catch { return []; }
+}
+
+function saveLocalTrips(list) {
+  localStorage.setItem(LS_KEY, JSON.stringify(list));
+}
+
+function addToLocalTrips(entry) {
+  const list = getLocalTrips().filter(t => t.id !== entry.id);
+  list.unshift(entry);
+  saveLocalTrips(list);
+}
+
+function removeFromLocalTrips(id) {
+  saveLocalTrips(getLocalTrips().filter(t => t.id !== id));
+}
+
+function updateLocalStats(id, stats) {
+  const list = getLocalTrips();
+  const idx = list.findIndex(t => t.id === id);
+  if (idx !== -1) { list[idx].stats = stats; list[idx].savedAt = Date.now(); saveLocalTrips(list); }
+}
+
+function showDashboard() {
+  const trips = getLocalTrips();
+  const container = document.getElementById('trip-list');
+
+  if (trips.length === 0) {
+    container.innerHTML = `
+      <div class="center-page" style="min-height:40vh">
+        <div style="font-size:2.5rem">✈️</div>
+        <h2>Chưa có chuyến đi nào</h2>
+        <p>Nhấn "+ Chuyến mới" để bắt đầu tạo chuyến chia tiền đầu tiên.</p>
+      </div>`;
+  } else {
+    container.innerHTML = trips.map(t => {
+      const s = t.stats || {};
+      const statsStr = [
+        s.members ? `${s.members} người` : null,
+        s.expenses ? `${s.expenses} khoản` : null,
+        s.total ? `${Math.round(s.total).toLocaleString('vi-VN')}đ` : null,
+        t.savedAt ? new Date(t.savedAt).toLocaleDateString('vi-VN') : null
+      ].filter(Boolean).join(' · ');
+
+      return `
+        <div class="trip-card">
+          <div class="trip-card-top">
+            <div>
+              <div class="trip-card-name">${escHtml(t.name)}</div>
+              ${statsStr ? `<div class="trip-card-stats">${statsStr}</div>` : ''}
+            </div>
+          </div>
+          <div class="trip-card-actions">
+            <a href="?trip=${t.id}&token=${t.editToken}" class="btn btn-primary btn-sm">Mở</a>
+            <button class="btn btn-secondary btn-sm" onclick="copyDashLink('${t.id}','${t.editToken}',this)">📋 Link sửa</button>
+            <button class="btn btn-secondary btn-sm" onclick="copyDashLink('${t.id}','${t.viewToken}',this)">👁 Link xem</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteTripFromDash('${t.id}')">Xóa</button>
+          </div>
+        </div>`;
+    }).join('');
+  }
+  showView('dashboard');
+}
+
+function copyDashLink(id, token, btn) {
+  const url = `${location.origin}${location.pathname}?trip=${id}&token=${token}`;
+  navigator.clipboard.writeText(url).then(() => {
+    const orig = btn.textContent;
+    btn.textContent = '✓ Đã copy';
+    setTimeout(() => btn.textContent = orig, 1800);
+  });
+}
+
+function deleteTripFromDash(id) {
+  if (!confirm('Xóa chuyến này khỏi danh sách? (Dữ liệu trên cloud vẫn còn, có thể mở lại bằng link)')) return;
+  removeFromLocalTrips(id);
+  showDashboard();
+}
+
+// ══ CREATE TRIP ════════════════════════════════════════════════════════
+function openCreateModal() {
+  document.getElementById('new-trip-name').value = '';
+  document.getElementById('modal-create').style.display = 'flex';
+  setTimeout(() => document.getElementById('new-trip-name').focus(), 50);
+}
+
+function closeCreateModal() {
+  document.getElementById('modal-create').style.display = 'none';
+}
+
+function closeModalOnBg(e) {
+  if (e.target === document.getElementById('modal-create')) closeCreateModal();
+}
+
+async function confirmCreateTrip() {
+  const name = document.getElementById('new-trip-name').value.trim();
+  if (!name) return alert('Vui lòng nhập tên chuyến đi.');
+  const btn = document.getElementById('btn-confirm-create');
+  btn.disabled = true; btn.textContent = 'Đang tạo...';
+
+  try {
+    const editToken = crypto.randomUUID();
+    const viewToken = crypto.randomUUID();
+    const ref = await db.collection('trips').add({
+      name, editToken, viewToken,
+      members: [], expenses: [],
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    addToLocalTrips({ id: ref.id, name, editToken, viewToken, savedAt: Date.now(), stats: {} });
+    location.href = `?trip=${ref.id}&token=${editToken}`;
+  } catch(e) {
+    alert('Không thể tạo chuyến đi. Kiểm tra kết nối mạng.');
+    btn.disabled = false; btn.textContent = 'Tạo →';
+  }
+}
+
+// ══ LOAD TRIP ══════════════════════════════════════════════════════════
+function loadTrip(tripId, data, mode) {
+  state.currentTripId  = tripId;
+  state.currentMode    = mode;
+  state.currentTripName = data.name || 'Chuyến đi';
+  state.currentEditToken = data.editToken;
+  state.currentViewToken = data.viewToken;
+  state.members  = data.members  || [];
+  state.expenses = data.expenses || [];
+  state.editingId = null;
+
+  // Trip name in header
+  document.getElementById('trip-name-display').textContent = state.currentTripName;
+
+  // Share URLs
+  const base = `${location.origin}${location.pathname}`;
+  document.getElementById('share-edit-url').textContent = `${base}?trip=${tripId}&token=${data.editToken}`;
+  document.getElementById('share-view-url').textContent = `${base}?trip=${tripId}&token=${data.viewToken}`;
+
+  // View-only mode
+  if (mode === 'view') {
+    document.getElementById('view-banner').style.display = '';
+    document.getElementById('btn-share-trip').style.display = 'none';
+    document.getElementById('expense-form-card').style.display = 'none';
+  }
+
+  // Save to localStorage pointer (if edit mode and not already there)
+  if (mode === 'edit') {
+    addToLocalTrips({
+      id: tripId, name: data.name,
+      editToken: data.editToken, viewToken: data.viewToken,
+      savedAt: Date.now()
+    });
+  }
+
+  showView('trip');
+  renderMemberTags();
+  renderExpenseList();
+  goStep(1);
+}
+
+async function refreshTrip() {
+  if (!state.currentTripId) return;
+  try {
+    const doc = await db.collection('trips').doc(state.currentTripId).get();
+    if (!doc.exists) return;
+    const data = doc.data();
+    state.members  = data.members  || [];
+    state.expenses = data.expenses || [];
+    renderMemberTags();
+    renderParticipants();
+    renderExpenseList();
+    showSaveIndicator('saved');
+  } catch(e) { showSaveIndicator(''); }
+}
+
+// ══ AUTO-SAVE ══════════════════════════════════════════════════════════
+function scheduleSave() {
+  if (state.currentMode !== 'edit') return;
+  clearTimeout(saveTimer);
+  showSaveIndicator('saving');
+  saveTimer = setTimeout(saveTrip, 800);
+}
+
+async function saveTrip() {
+  if (!db || !state.currentTripId) return;
+  try {
+    await db.collection('trips').doc(state.currentTripId).update({
+      members: state.members,
+      expenses: state.expenses,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    showSaveIndicator('saved');
+    // Update local stats cache
+    const total = state.expenses.reduce((s,e) => s + e.amount, 0);
+    updateLocalStats(state.currentTripId, {
+      members: state.members.length,
+      expenses: state.expenses.length,
+      total
+    });
+  } catch(e) {
+    showSaveIndicator('error');
+  }
+}
+
+function showSaveIndicator(status) {
+  const el = document.getElementById('save-indicator');
+  if (!el) return;
+  el.className = 'save-indicator';
+  if (status === 'saving') { el.textContent = 'Đang lưu...'; el.classList.add('saving'); }
+  else if (status === 'saved') { el.textContent = '✓ Đã lưu'; el.classList.add('saved'); }
+  else if (status === 'error') { el.textContent = '⚠ Lỗi lưu'; }
+  else { el.textContent = ''; }
+}
+
+// ══ SHARE POPOVER ══════════════════════════════════════════════════════
+function toggleSharePopover() {
+  const p = document.getElementById('share-popover');
+  p.style.display = p.style.display === 'none' ? '' : 'none';
+}
+
+document.addEventListener('click', e => {
+  const wrap = document.getElementById('share-wrap');
+  if (wrap && !wrap.contains(e.target)) {
+    document.getElementById('share-popover').style.display = 'none';
+  }
+});
+
+function copyLink(type) {
+  const el = document.getElementById(type === 'edit' ? 'share-edit-url' : 'share-view-url');
+  navigator.clipboard.writeText(el.textContent).then(() => {
+    const flash = document.getElementById('copy-flash');
+    flash.textContent = '✓ Đã copy link!';
+    flash.style.display = '';
+    setTimeout(() => flash.style.display = 'none', 1800);
+  });
+}
+
+// ══ UTILITIES ══════════════════════════════════════════════════════════
+function fmt(n) { return Math.round(n).toLocaleString('vi-VN') + 'đ'; }
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function formatInput(el) {
+  const pos = el.selectionStart;
+  const raw = el.value.replace(/\./g,'').replace(/\D/g,'');
+  if (raw === '') { el.value = ''; return; }
+  const formatted = parseInt(raw, 10).toLocaleString('vi-VN');
+  const added = formatted.length - el.value.length;
+  el.value = formatted;
+  el.setSelectionRange(pos + added, pos + added);
+  if (el.id === 'exp-amount') autoFillSolePayer();
+}
+
+function autoFillSolePayer() {
+  const rows = document.querySelectorAll('.payer-row');
+  if (rows.length !== 1) return;
+  const total = parseNum(document.getElementById('exp-amount'));
+  if (total <= 0) return;
+  rows[0].querySelector('input').value = total.toLocaleString('vi-VN');
+  checkPayerTotal();
+}
+
+function parseNum(el) {
+  return parseFloat((el.value || '').replace(/\./g,'').replace(',','.')) || 0;
+}
+
+function fmtDate(d) {
+  if (!d) return '';
+  const [y,m,day] = d.split('-');
+  return `${day}/${m}/${y}`;
+}
+
+function today() { return new Date().toISOString().slice(0,10); }
+
+// ══ NAVIGATION ══════════════════════════════════════════════════════════
+function goStep(n) {
+  [1,2,3].forEach(i => {
+    document.getElementById(`step-${i}`).style.display = i === n ? '' : 'none';
+    const btn = document.getElementById(`nav-${i}`);
+    btn.classList.remove('active','done');
+    if (i === n) btn.classList.add('active');
+    else if (i < n) btn.classList.add('done');
+  });
+  if (n === 2) renderParticipants();
+  if (n === 3) renderResults();
+}
+
+// ══ STEP 1: MEMBERS ════════════════════════════════════════════════════
+function addMember() {
+  if (state.currentMode === 'view') return;
+  const input = document.getElementById('member-input');
+  const name = input.value.trim();
+  if (!name) return;
+  if (state.members.includes(name)) {
+    input.value = '';
+    input.placeholder = `"${name}" đã có trong danh sách`;
+    setTimeout(() => input.placeholder = 'Nhập tên rồi nhấn Thêm', 2000);
+    return;
+  }
+  state.members.push(name);
+  input.value = '';
+  renderMemberTags();
+  scheduleSave();
+}
+
+function removeMember(name) {
+  if (state.currentMode === 'view') return;
+  state.members = state.members.filter(m => m !== name);
+  renderMemberTags();
+  scheduleSave();
+}
+
+function renderMemberTags() {
+  const container = document.getElementById('member-tags');
+  const hint = document.getElementById('member-hint');
+  const nextBtn = document.getElementById('btn-step1-next');
+  const isView = state.currentMode === 'view';
+
+  container.innerHTML = state.members.map(m => `
+    <span class="tag">
+      ${escHtml(m)}
+      ${!isView ? `<button class="tag-remove" onclick="removeMember('${m.replace(/'/g,"\\'")}')" title="Xóa">×</button>` : ''}
+    </span>
+  `).join('');
+
+  const ok = state.members.length >= 2;
+  if (nextBtn) nextBtn.disabled = !ok;
+  if (hint) hint.style.display = ok ? 'none' : '';
+
+  // Hide add section in view mode
+  const addSec = document.getElementById('member-add-section');
+  if (addSec) addSec.style.display = isView ? 'none' : '';
+}
+
+// ══ STEP 2: EXPENSES ═══════════════════════════════════════════════════
+function renderParticipants() {
+  const container = document.getElementById('exp-participants');
+  if (!container) return;
+  container.innerHTML = state.members.map(m => `
+    <label class="checkbox-item">
+      <input type="checkbox" name="participant" value="${escHtml(m)}" checked> ${escHtml(m)}
+    </label>
+  `).join('');
+
+  if (!document.getElementById('exp-date').value) {
+    document.getElementById('exp-date').value = today();
+  }
+  if (document.getElementById('payers-list').children.length === 0) {
+    addPayerRow();
+  }
+}
+
+function addPayerRow() {
+  const list = document.getElementById('payers-list');
+  const row = document.createElement('div');
+  row.className = 'payer-row';
+  row.innerHTML = `
+    <select onchange="checkPayerTotal()">
+      ${state.members.map(m => `<option value="${escHtml(m)}">${escHtml(m)}</option>`).join('')}
+    </select>
+    <input type="text" placeholder="Số tiền đã trả" inputmode="numeric" oninput="formatInput(this); checkPayerTotal()">
+    <button class="payer-remove" onclick="removePayerRow(this)" title="Xóa">×</button>
+  `;
+  list.appendChild(row);
+}
+
+function removePayerRow(btn) {
+  btn.closest('.payer-row').remove();
+  autoFillSolePayer();
+  checkPayerTotal();
+}
+
+function onExpTypeChange() {
+  const type = document.getElementById('exp-type').value;
+  document.getElementById('exp-type-info').style.display = type === 'prepay' ? '' : 'none';
+  document.getElementById('exp-amount').placeholder = type === 'prepay' ? '0 (để trống nếu chưa biết)' : '0';
+  checkPayerTotal();
+}
+
+function checkPayerTotal() {
+  const type = document.getElementById('exp-type').value;
+  const amount = parseNum(document.getElementById('exp-amount'));
+  const rows = document.querySelectorAll('.payer-row');
+  let paid = 0;
+  rows.forEach(r => { paid += parseNum(r.querySelector('input')); });
+  const warn = document.getElementById('payer-warning');
+  if (type === 'prepay') { warn.style.display = 'none'; return; }
+  if (amount > 0 && paid > amount) {
+    warn.style.display = '';
+    warn.textContent = `Tổng đã trả (${fmt(paid)}) vượt quá tổng hóa đơn (${fmt(amount)}). Vui lòng kiểm tra lại.`;
+  } else {
+    warn.style.display = 'none';
+  }
+}
+
+function addExpense() {
+  if (state.currentMode === 'view') return;
+  const name   = document.getElementById('exp-name').value.trim();
+  const date   = document.getElementById('exp-date').value;
+  const amount = parseNum(document.getElementById('exp-amount'));
+  const type   = document.getElementById('exp-type').value;
+
+  if (!name) return alert('Vui lòng nhập tên khoản chi.');
+  if (type === 'normal' && (!amount || amount <= 0)) return alert('Vui lòng nhập tổng tiền hợp lệ.');
+
+  const participants = [...document.querySelectorAll('input[name="participant"]:checked')].map(c => c.value);
+  if (participants.length === 0) return alert('Vui lòng chọn ít nhất 1 người tham gia.');
+
+  const payers = [];
+  let totalPaid = 0;
+  document.querySelectorAll('.payer-row').forEach(r => {
+    const who = r.querySelector('select').value;
+    const howMuch = parseNum(r.querySelector('input'));
+    if (howMuch > 0) { payers.push({ who, amount: howMuch }); totalPaid += howMuch; }
+  });
+
+  if (type === 'normal' && totalPaid > amount) return alert('Tổng tiền đã trả vượt quá tổng hóa đơn. Vui lòng kiểm tra lại.');
+
+  if (state.editingId !== null) {
+    const idx = state.expenses.findIndex(e => e.id === state.editingId);
+    if (idx !== -1) state.expenses[idx] = { id: state.editingId, name, date, amount, participants, payers, type };
+  } else {
+    state.expenses.push({ id: Date.now(), name, date, amount, participants, payers, type });
+  }
+
+  resetExpenseForm();
+  renderExpenseList();
+  scheduleSave();
+}
+
+function resetExpenseForm() {
+  state.editingId = null;
+  document.getElementById('exp-name').value = '';
+  document.getElementById('exp-amount').value = '';
+  document.getElementById('exp-type').value = 'normal';
+  document.getElementById('exp-type-info').style.display = 'none';
+  document.getElementById('exp-amount').placeholder = '0';
+  document.getElementById('payers-list').innerHTML = '';
+  addPayerRow();
+  document.querySelectorAll('input[name="participant"]').forEach(c => c.checked = true);
+  document.getElementById('payer-warning').style.display = 'none';
+  document.getElementById('expense-form-title').textContent = 'Thêm khoản chi';
+  document.getElementById('btn-save-expense').textContent = 'Lưu khoản chi';
+  document.getElementById('btn-cancel-edit').style.display = 'none';
+}
+
+function cancelEdit() { resetExpenseForm(); }
+
+function editExpense(id) {
+  if (state.currentMode === 'view') return;
+  const exp = state.expenses.find(e => e.id === id);
+  if (!exp) return;
+  state.editingId = id;
+
+  document.getElementById('exp-type').value = exp.type || 'normal';
+  onExpTypeChange();
+  document.getElementById('exp-name').value = exp.name;
+  document.getElementById('exp-date').value = exp.date;
+  document.getElementById('exp-amount').value = exp.amount.toLocaleString('vi-VN');
+
+  document.querySelectorAll('input[name="participant"]').forEach(c => {
+    c.checked = exp.participants.includes(c.value);
+  });
+
+  const list = document.getElementById('payers-list');
+  list.innerHTML = '';
+  if (exp.payers.length === 0) {
+    addPayerRow();
+  } else {
+    exp.payers.forEach(p => {
+      const row = document.createElement('div');
+      row.className = 'payer-row';
+      row.innerHTML = `
+        <select onchange="checkPayerTotal()">
+          ${state.members.map(m => `<option value="${escHtml(m)}" ${m===p.who?'selected':''}>${escHtml(m)}</option>`).join('')}
+        </select>
+        <input type="text" placeholder="Số tiền đã trả" inputmode="numeric"
+          value="${p.amount.toLocaleString('vi-VN')}"
+          oninput="formatInput(this); checkPayerTotal()">
+        <button class="payer-remove" onclick="removePayerRow(this)" title="Xóa">×</button>
+      `;
+      list.appendChild(row);
+    });
+  }
+
+  document.getElementById('expense-form-title').textContent = `Đang sửa: ${exp.name}`;
+  document.getElementById('btn-save-expense').textContent = 'Cập nhật khoản chi';
+  document.getElementById('btn-cancel-edit').style.display = '';
+  document.getElementById('expense-form-title').scrollIntoView({ behavior:'smooth', block:'start' });
+  checkPayerTotal();
+}
+
+function removeExpense(id) {
+  if (state.currentMode === 'view') return;
+  state.expenses = state.expenses.filter(e => e.id !== id);
+  renderExpenseList();
+  scheduleSave();
+}
+
+function renderExpenseList() {
+  const container = document.getElementById('expense-list');
+  if (!container) return;
+  const calcBtn = document.getElementById('btn-calc');
+  if (calcBtn) calcBtn.disabled = state.expenses.length === 0;
+  const isView = state.currentMode === 'view';
+
+  if (state.expenses.length === 0) {
+    container.innerHTML = '<div class="empty">Chưa có khoản chi nào.</div>';
+    return;
+  }
+
+  container.innerHTML = [...state.expenses].reverse().map(e => {
+    const totalPaid = e.payers.reduce((s,p) => s + p.amount, 0);
+    const payerStr  = e.payers.length ? e.payers.map(p => p.who).join(', ') : 'Chưa ai trả';
+    const prepayBadge = e.type === 'prepay'
+      ? ' <span class="badge badge-prepay" style="font-size:0.68rem;vertical-align:middle">Góp quỹ</span>' : '';
+    const actions = isView ? '' : `
+      <button class="btn btn-secondary btn-sm" onclick="editExpense(${e.id})">Sửa</button>
+      <button class="btn btn-danger btn-sm" onclick="removeExpense(${e.id})">Xóa</button>`;
+    return `
+      <div class="expense-item">
+        <div class="expense-header">
+          <div style="min-width:0;flex:1">
+            <div class="expense-name">${escHtml(e.name)}${prepayBadge}</div>
+            <div class="expense-meta">${fmtDate(e.date)} · ${e.participants.length} người · ${fmt(totalPaid)} / ${fmt(e.amount)} · ${escHtml(payerStr)}</div>
+          </div>
+          <div style="display:flex;gap:6px;align-items:center;flex-shrink:0">${actions}</div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ══ STEP 3: RESULTS ═════════════════════════════════════════════════════
+function calculate() { goStep(3); }
+
+function renderResults() {
+  const owed = {};
+  const paid = {};
+  state.members.forEach(m => { owed[m] = 0; paid[m] = 0; });
+  state.expenses.forEach(exp => {
+    if (exp.participants.length === 0) return;
+    const share = exp.amount / exp.participants.length;
+    exp.participants.forEach(p => { owed[p] = (owed[p]||0) + share; });
+    exp.payers.forEach(p => { paid[p.who] = (paid[p.who]||0) + p.amount; });
+  });
+
+  const totalBill = state.expenses.reduce((s,e) => s + e.amount, 0);
+  const totalPaid = Object.values(paid).reduce((s,v) => s + v, 0);
+
+  document.getElementById('summary-bar').innerHTML = `
+    <div class="summary-item"><div class="s-label">Tổng hóa đơn</div><div class="s-value">${fmt(totalBill)}</div></div>
+    <div class="summary-item"><div class="s-label">Tổng đã trả</div><div class="s-value">${fmt(totalPaid)}</div></div>
+    <div class="summary-item"><div class="s-label">Số khoản chi</div><div class="s-value">${state.expenses.length}</div></div>
+    <div class="summary-item"><div class="s-label">Thành viên</div><div class="s-value">${state.members.length} người</div></div>
+  `;
+
+  const netMap = {};
+  const tbody = document.getElementById('result-tbody');
+  tbody.innerHTML = state.members.map(m => {
+    const net = Math.round((paid[m]||0) - owed[m]);
+    netMap[m] = net;
+    const [badgeClass, label] = net > 0
+      ? ['badge-positive', `Nhận lại ${fmt(net)}`]
+      : net < 0
+      ? ['badge-negative', `Cần trả ${fmt(-net)}`]
+      : ['badge-zero', 'Huề'];
+    return `
+      <tr>
+        <td><strong>${escHtml(m)}</strong></td>
+        <td>${fmt(owed[m])}</td>
+        <td>${fmt(paid[m]||0)}</td>
+        <td><span class="badge ${badgeClass}">${label}</span></td>
+      </tr>`;
+  }).join('');
+
+  renderSuggestions(netMap);
+}
+
+function renderSuggestions(netMap) {
+  const creditors = Object.entries(netMap).filter(([,v]) => v > 0.5).sort((a,b) => b[1]-a[1]);
+  const debtors   = Object.entries(netMap).filter(([,v]) => v < -0.5).sort((a,b) => a[1]-b[1]);
+  const origCred  = creditors.map(([n]) => n);
+
+  const C = creditors.map(([n,v]) => [n,v]);
+  const D = debtors.map(([n,v])   => [n,v]);
+  const txns = [];
+  while (C.length && D.length) {
+    const amt = Math.min(C[0][1], -D[0][1]);
+    txns.push({ from: D[0][0], to: C[0][0], amount: Math.round(amt) });
+    C[0][1] -= amt; D[0][1] += amt;
+    if (Math.abs(C[0][1]) < 0.5) C.shift();
+    if (Math.abs(D[0][1]) < 0.5) D.shift();
+  }
+
+  const listEl = document.getElementById('suggestion-list');
+  const altEl  = document.getElementById('suggestion-alt');
+
+  if (txns.length === 0) {
+    listEl.innerHTML = '<div class="empty">Tất cả đã huề — không cần chuyển tiền.</div>';
+    altEl.style.display = 'none';
+    return;
+  }
+
+  listEl.innerHTML = txns.map((t,i) => `
+    <div class="txn-row">
+      <span class="txn-index">${i+1}</span>
+      <strong>${escHtml(t.from)}</strong>
+      <span class="txn-arrow">→</span>
+      <span>${escHtml(t.to)}</span>
+      <span class="txn-amount">${fmt(t.amount)}</span>
+    </div>`).join('');
+
+  if (origCred.length >= 2) {
+    const top = origCred[0];
+    const altLines = [
+      ...debtors.map(([n,v]) => `<strong>${escHtml(n)}</strong> chuyển <strong>${fmt(-v)}</strong> cho <strong>${escHtml(top)}</strong>`),
+      ...origCred.slice(1).map(n => `<strong>${escHtml(top)}</strong> chuyển lại <strong>${fmt(netMap[n])}</strong> cho <strong>${escHtml(n)}</strong>`)
+    ];
+    altEl.style.display = '';
+    altEl.innerHTML = `<strong>Gợi ý thu gọn</strong> — mọi người chỉ cần nhớ 1 tài khoản nhận (<strong>${escHtml(top)}</strong>):<br>${altLines.join('<br>')}`;
+  } else {
+    altEl.style.display = 'none';
+  }
+}
+
+// ══ EXPORT EXCEL ═══════════════════════════════════════════════════════
+function exportToExcel() {
+  const owed = {};
+  const paid = {};
+  state.members.forEach(m => { owed[m] = 0; paid[m] = 0; });
+  state.expenses.forEach(exp => {
+    if (exp.participants.length === 0) return;
+    const share = exp.amount / exp.participants.length;
+    exp.participants.forEach(p => { owed[p] = (owed[p]||0) + share; });
+    exp.payers.forEach(p => { paid[p.who] = (paid[p.who]||0) + p.amount; });
+  });
+  const totalBill    = state.expenses.reduce((s,e) => s + e.amount, 0);
+  const totalPaidAll = Object.values(paid).reduce((s,v) => s + v, 0);
+
+  const wb = XLSX.utils.book_new();
+  const thin = { style:'thin', color:{ rgb:'D1D5DB' } };
+  const borders = { top:thin, bottom:thin, left:thin, right:thin };
+
+  function sTitle()  { return { font:{bold:true,sz:16,color:{rgb:'FFFFFF'}}, fill:{fgColor:{rgb:'1D4ED8'}}, alignment:{horizontal:'center',vertical:'center'} }; }
+  function sHeader() { return { font:{bold:true,sz:11,color:{rgb:'FFFFFF'}}, fill:{fgColor:{rgb:'2563EB'}}, alignment:{horizontal:'center',vertical:'center'}, border:borders }; }
+  function sLabel()  { return { font:{bold:true,sz:10}, fill:{fgColor:{rgb:'EFF6FF'}}, border:borders, alignment:{vertical:'center'} }; }
+  function sData(bg,align,bold) { return { font:bold?{bold:true,sz:10}:{sz:10}, fill:{fgColor:{rgb:bg||'FFFFFF'}}, alignment:{horizontal:align||'left',vertical:'center'}, border:borders }; }
+  function sNum(bg)  { return { font:{sz:10}, fill:{fgColor:{rgb:bg||'FFFFFF'}}, alignment:{horizontal:'right',vertical:'center'}, border:borders, numFmt:'#,##0' }; }
+  function sResult(net) {
+    const base = { alignment:{horizontal:'center',vertical:'center'}, border:borders };
+    if (net > 0) return { ...base, font:{bold:true,sz:10,color:{rgb:'166534'}}, fill:{fgColor:{rgb:'DCFCE7'}} };
+    if (net < 0) return { ...base, font:{bold:true,sz:10,color:{rgb:'991B1B'}}, fill:{fgColor:{rgb:'FEE2E2'}} };
+    return { ...base, font:{sz:10,color:{rgb:'6B7280'}}, fill:{fgColor:{rgb:'F3F4F6'}} };
+  }
+  function c(v,style) { return { v:v??'', t:typeof v==='number'?'n':'s', s:style }; }
+  function cn(v,style){ return { v, t:'n', s:style }; }
+  function blank(s)   { return { v:'', t:'s', s:s||{} }; }
+  function col(i)     { return String.fromCharCode(65+i); }
+
+  // Sheet 1: Kết quả
+  const ws1 = {};
+  const exportDate = new Date().toLocaleDateString('vi-VN');
+  ws1['A1'] = c(`KẾT QUẢ: ${state.currentTripName}`, sTitle());
+  for (let i=1;i<6;i++) ws1[`${col(i)}1`] = blank(sTitle());
+  ws1['A2'] = c(`Xuất ngày: ${exportDate}`, {font:{italic:true,sz:10,color:{rgb:'6B7280'}},alignment:{horizontal:'center'}});
+  for (let i=1;i<6;i++) ws1[`${col(i)}2`] = blank();
+  ws1['A4'] = c('Tổng hóa đơn:', sLabel()); ws1['B4'] = cn(totalBill, sNum());
+  ws1['C4'] = c('Tổng đã trả:',  sLabel()); ws1['D4'] = cn(totalPaidAll, sNum());
+  ws1['E4'] = c('Số thành viên:', sLabel()); ws1['F4'] = c(`${state.members.length} người`, sData('EFF6FF','center'));
+  ['STT','Tên','Phần phải trả (đ)','Đã trả (đ)','Chênh lệch (đ)','Trạng thái']
+    .forEach((h,i) => { ws1[`${col(i)}6`] = c(h,sHeader()); });
+  state.members.forEach((m,i) => {
+    const r = 7+i;
+    const net = Math.round((paid[m]||0) - owed[m]);
+    const bg = i%2===0?'FFFFFF':'F9FAFB';
+    const rs = sResult(net);
+    const label = net>0?`Nhận lại ${Math.abs(net).toLocaleString('vi-VN')}đ`:net<0?`Cần trả ${Math.abs(net).toLocaleString('vi-VN')}đ`:'Huề';
+    ws1[`A${r}`]=cn(i+1,sData(bg,'center')); ws1[`B${r}`]=c(m,sData(bg,'left',true));
+    ws1[`C${r}`]=cn(Math.round(owed[m]),sNum(bg)); ws1[`D${r}`]=cn(Math.round(paid[m]||0),sNum(bg));
+    ws1[`E${r}`]={v:net,t:'n',s:{...rs,numFmt:'+#,##0;-#,##0;0'}}; ws1[`F${r}`]=c(label,rs);
+  });
+  const lr1 = 6+state.members.length;
+  ws1['!ref']=`A1:F${lr1}`; ws1['!merges']=[{s:{r:0,c:0},e:{r:0,c:5}},{s:{r:1,c:0},e:{r:1,c:5}}];
+  ws1['!cols']=[{wch:5},{wch:18},{wch:20},{wch:16},{wch:18},{wch:24}];
+  ws1['!rows']=[{hpt:34},{hpt:16}];
+  XLSX.utils.book_append_sheet(wb, ws1, 'Kết quả');
+
+  // Sheet 2: Chi tiết
+  const ws2 = {};
+  ws2['A1'] = c('CHI TIẾT KHOẢN CHI', sTitle());
+  for (let i=1;i<7;i++) ws2[`${col(i)}1`] = blank(sTitle());
+  ['STT','Loại','Tên khoản chi','Ngày','Tổng tiền (đ)','Người tham gia','Người đã trả']
+    .forEach((h,i) => { ws2[`${col(i)}3`] = c(h,sHeader()); });
+  state.expenses.forEach((exp,i) => {
+    const r = 4+i;
+    const bg = i%2===0?'FFFFFF':'F9FAFB';
+    const payerStr = exp.payers.length ? exp.payers.map(p=>`${p.who}: ${Math.round(p.amount).toLocaleString('vi-VN')}đ`).join(' | ') : 'Chưa ai trả';
+    const typeLabel = exp.type==='prepay'?'Trả trước / Góp quỹ':'Thông thường';
+    const typeBg = exp.type==='prepay'?'FEF9C3':bg;
+    ws2[`A${r}`]=cn(i+1,sData(bg,'center')); ws2[`B${r}`]=c(typeLabel,sData(typeBg,'center'));
+    ws2[`C${r}`]=c(exp.name,sData(bg,'left',true)); ws2[`D${r}`]=c(fmtDate(exp.date),sData(bg,'center'));
+    ws2[`E${r}`]=cn(exp.amount,sNum(bg)); ws2[`F${r}`]=c(exp.participants.join(', '),sData(bg));
+    ws2[`G${r}`]=c(payerStr,sData(bg));
+  });
+  const lr2 = 3+state.expenses.length;
+  ws2['!ref']=`A1:G${lr2}`; ws2['!merges']=[{s:{r:0,c:0},e:{r:0,c:6}}];
+  ws2['!cols']=[{wch:5},{wch:20},{wch:22},{wch:14},{wch:18},{wch:28},{wch:40}];
+  ws2['!rows']=[{hpt:34}];
+  XLSX.utils.book_append_sheet(wb, ws2, 'Chi tiết khoản chi');
+
+  // Sheet 3: Giao dịch gợi ý
+  const netMap3 = {};
+  state.members.forEach(m => netMap3[m] = Math.round((paid[m]||0) - owed[m]));
+  const cr3 = Object.entries(netMap3).filter(([,v])=>v>0.5).sort((a,b)=>b[1]-a[1]);
+  const db3 = Object.entries(netMap3).filter(([,v])=>v<-0.5).sort((a,b)=>a[1]-b[1]);
+  const C3=[...cr3.map(([n,v])=>[n,v])], D3=[...db3.map(([n,v])=>[n,v])], txns3=[];
+  while(C3.length&&D3.length){const amt=Math.min(C3[0][1],-D3[0][1]);txns3.push({from:D3[0][0],to:C3[0][0],amount:Math.round(amt)});C3[0][1]-=amt;D3[0][1]+=amt;if(Math.abs(C3[0][1])<0.5)C3.shift();if(Math.abs(D3[0][1])<0.5)D3.shift();}
+  const ws3 = {};
+  ws3['A1']=c('GIAO DỊCH GỢI Ý',sTitle()); ['B1','C1','D1'].forEach(k=>ws3[k]=blank(sTitle()));
+  ws3['A2']=c(`Tối thiểu ${txns3.length} giao dịch`,{font:{italic:true,sz:10,color:{rgb:'6B7280'}},alignment:{horizontal:'center'}});
+  ['B2','C2','D2'].forEach(k=>ws3[k]=blank());
+  ['STT','Người chuyển','Người nhận','Số tiền (đ)'].forEach((h,i)=>{ws3[`${col(i)}4`]=c(h,sHeader());});
+  txns3.forEach((t,i)=>{const r=5+i,bg=i%2===0?'FFFFFF':'F9FAFB';ws3[`A${r}`]=cn(i+1,sData(bg,'center'));ws3[`B${r}`]=c(t.from,sData(bg,'left',true));ws3[`C${r}`]=c(t.to,sData(bg,'left',true));ws3[`D${r}`]=cn(t.amount,sNum(bg));});
+  const lr3=txns3.length>0?4+txns3.length:5;
+  ws3['!ref']=`A1:D${lr3}`; ws3['!merges']=[{s:{r:0,c:0},e:{r:0,c:3}},{s:{r:1,c:0},e:{r:1,c:3}}];
+  ws3['!cols']=[{wch:5},{wch:20},{wch:20},{wch:18}]; ws3['!rows']=[{hpt:34},{hpt:16}];
+  XLSX.utils.book_append_sheet(wb, ws3, 'Giao dịch gợi ý');
+
+  XLSX.writeFile(wb, `chia-tien-${state.currentTripName.replace(/\s+/g,'-')}-${exportDate.replace(/\//g,'-')}.xlsx`);
+}
+
+// ══ INIT ═══════════════════════════════════════════════════════════════
+renderExpenseList();
+</script>
+</body>
+</html>
