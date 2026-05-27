@@ -3,193 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Chia Tiền Nhóm</title>
-<style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-  body {
-    font-family: system-ui, -apple-system, sans-serif;
-    background: #f5f5f5;
-    color: #1a1a1a;
-    min-height: 100vh;
-    padding: 24px 16px;
-  }
-
-  .app { max-width: 680px; margin: 0 auto; }
-
-  h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: 8px; color: #111; }
-  .subtitle { color: #666; font-size: 0.9rem; margin-bottom: 28px; }
-
-  /* Steps nav */
-  .steps { display:flex; gap:0; margin-bottom:28px; border-radius:10px; overflow:hidden; border:1px solid #e0e0e0; }
-  .step-btn { flex:1; padding:10px 4px; font-size:0.8rem; font-weight:600; background:#fff; border:none; cursor:pointer; color:#999; transition:background 0.15s,color 0.15s; border-right:1px solid #e0e0e0; }
-  .step-btn:last-child { border-right:none; }
-  .step-btn.active { background:#2563eb; color:#fff; }
-  .step-btn.done { background:#eff6ff; color:#2563eb; }
-
-  /* Card */
-  .card { background:#fff; border-radius:12px; border:1px solid #e5e7eb; padding:20px; margin-bottom:16px; }
-  .card-title { font-size:1rem; font-weight:700; margin-bottom:16px; color:#111; }
-
-  /* Form */
-  label { display:block; font-size:0.85rem; font-weight:600; color:#374151; margin-bottom:4px; }
-  input[type="text"], input[type="number"], input[type="date"], select {
-    width:100%; padding:8px 12px; border:1px solid #d1d5db; border-radius:8px;
-    font-size:0.9rem; color:#111; background:#fff; outline:none; transition:border-color 0.15s;
-  }
-  input:focus, select:focus { border-color:#2563eb; box-shadow:0 0 0 3px #eff6ff; }
-  input:disabled, select:disabled { background:#f9fafb; color:#9ca3af; cursor:not-allowed; }
-  .field { margin-bottom:14px; }
-  .row { display:flex; gap:10px; }
-  .row .field { flex:1; }
-
-  /* Buttons */
-  .btn { display:inline-flex; align-items:center; gap:6px; padding:8px 16px; border-radius:8px; font-size:0.875rem; font-weight:600; border:none; cursor:pointer; transition:opacity 0.15s,background 0.15s; }
-  .btn:hover { opacity:0.88; }
-  .btn:disabled { opacity:0.4; cursor:not-allowed; }
-  .btn-primary { background:#2563eb; color:#fff; }
-  .btn-secondary { background:#f3f4f6; color:#374151; border:1px solid #e5e7eb; }
-  .btn-danger { background:#fee2e2; color:#dc2626; }
-  .btn-success { background:#16a34a; color:#fff; }
-  .btn-sm { padding:4px 10px; font-size:0.78rem; border-radius:6px; }
-  .btn-full { width:100%; justify-content:center; padding:11px; }
-  .btn-ghost { background:none; border:none; padding:4px 8px; color:#6b7280; font-size:0.82rem; cursor:pointer; border-radius:6px; }
-  .btn-ghost:hover { background:#f3f4f6; color:#111; }
-
-  /* Tags */
-  .tags { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
-  .tag { display:inline-flex; align-items:center; gap:6px; background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; border-radius:20px; padding:4px 12px; font-size:0.82rem; font-weight:600; }
-  .tag-remove { background:none; border:none; cursor:pointer; color:#93c5fd; font-size:1rem; line-height:1; padding:0; display:flex; align-items:center; }
-  .tag-remove:hover { color:#dc2626; }
-
-  /* Checkboxes */
-  .checkbox-group { display:flex; flex-wrap:wrap; gap:8px; margin-top:4px; }
-  .checkbox-item { display:flex; align-items:center; gap:6px; background:#f9fafb; border:1px solid #e5e7eb; border-radius:8px; padding:6px 10px; cursor:pointer; font-size:0.85rem; font-weight:500; user-select:none; transition:background 0.12s,border-color 0.12s; }
-  .checkbox-item input { accent-color:#2563eb; width:15px; height:15px; cursor:pointer; }
-  .checkbox-item:has(input:checked) { background:#eff6ff; border-color:#93c5fd; color:#1d4ed8; }
-
-  /* Payers */
-  .payers-list { display:flex; flex-direction:column; gap:8px; margin-top:4px; }
-  .payer-row { display:flex; gap:8px; align-items:center; }
-  .payer-row select { flex:1.2; }
-  .payer-row input { flex:1; }
-  .payer-remove { background:none; border:none; cursor:pointer; color:#9ca3af; font-size:1.1rem; padding:4px; border-radius:4px; flex-shrink:0; }
-  .payer-remove:hover { color:#dc2626; background:#fee2e2; }
-
-  /* Expense list */
-  .expense-item { border:1px solid #e5e7eb; border-radius:8px; padding:9px 12px; margin-bottom:6px; background:#fafafa; }
-  .expense-header { display:flex; justify-content:space-between; align-items:center; gap:8px; }
-  .expense-name { font-weight:700; font-size:0.88rem; }
-  .expense-amount { font-weight:700; color:#2563eb; font-size:0.88rem; white-space:nowrap; }
-  .expense-meta { font-size:0.75rem; color:#6b7280; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-
-  /* Info / Warning */
-  .info-box { background:#eff6ff; border:1px solid #bfdbfe; color:#1d4ed8; border-radius:8px; padding:10px 14px; font-size:0.83rem; margin-top:8px; line-height:1.5; }
-  .warning { background:#fffbeb; border:1px solid #fcd34d; color:#92400e; border-radius:8px; padding:10px 14px; font-size:0.83rem; margin-top:8px; }
-
-  /* Badges */
-  .badge { display:inline-block; padding:2px 8px; border-radius:20px; font-size:0.75rem; font-weight:700; }
-  .badge-positive { background:#dcfce7; color:#16a34a; }
-  .badge-negative { background:#fee2e2; color:#dc2626; }
-  .badge-zero { background:#f3f4f6; color:#6b7280; }
-  .badge-prepay { background:#fef9c3; color:#854d0e; border:1px solid #fde68a; }
-
-  /* Results */
-  .result-table { width:100%; border-collapse:collapse; font-size:0.88rem; }
-  .result-table th { text-align:left; padding:8px 12px; background:#f9fafb; font-size:0.78rem; font-weight:700; color:#6b7280; text-transform:uppercase; letter-spacing:0.05em; border-bottom:1px solid #e5e7eb; }
-  .result-table td { padding:10px 12px; border-bottom:1px solid #f3f4f6; }
-  .result-table tr:last-child td { border-bottom:none; }
-
-  /* Summary bar */
-  .summary-bar { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:16px; }
-  .summary-item { flex:1; min-width:130px; background:#f9fafb; border:1px solid #e5e7eb; border-radius:10px; padding:12px 14px; }
-  .summary-item .s-label { font-size:0.75rem; color:#6b7280; font-weight:600; text-transform:uppercase; margin-bottom:4px; }
-  .summary-item .s-value { font-size:1.1rem; font-weight:700; }
-
-  /* Suggested transactions */
-  .txn-row { display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid #f3f4f6; font-size:0.9rem; }
-  .txn-row:last-child { border-bottom:none; }
-  .txn-index { width:22px; height:22px; border-radius:50%; background:#e0e7ff; color:#4338ca; font-size:0.72rem; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
-  .txn-arrow { color:#9ca3af; font-size:1.1rem; flex-shrink:0; }
-  .txn-amount { font-weight:700; color:#2563eb; margin-left:auto; white-space:nowrap; }
-  .suggestion-alt { margin-top:14px; padding:10px 14px; background:#fffbeb; border:1px solid #fcd34d; border-radius:8px; font-size:0.83rem; color:#78350f; line-height:1.6; }
-  .suggestion-alt strong { color:#92400e; }
-
-  /* Misc */
-  .empty { text-align:center; color:#9ca3af; padding:20px; font-size:0.88rem; }
-  .nav-actions { display:flex; gap:10px; justify-content:flex-end; margin-top:16px; }
-  .divider { height:1px; background:#e5e7eb; margin:16px 0; }
-  .input-row { display:flex; gap:8px; }
-  .input-row input { flex:1; }
-
-  /* ── Dashboard ─────────────────────────────────────────── */
-  .dash-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; }
-  .dash-header h1 { margin-bottom:0; }
-
-  .trip-card {
-    background:#fff; border-radius:12px; border:1px solid #e5e7eb;
-    padding:16px 18px; margin-bottom:12px;
-    transition:box-shadow 0.15s;
-  }
-  .trip-card:hover { box-shadow:0 2px 8px rgba(0,0,0,0.07); }
-  .trip-card-top { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
-  .trip-card-name { font-weight:700; font-size:1rem; color:#111; }
-  .trip-card-stats { font-size:0.78rem; color:#6b7280; margin-top:4px; }
-  .trip-card-actions { display:flex; gap:6px; flex-wrap:wrap; margin-top:10px; }
-
-  /* ── Trip header ────────────────────────────────────────── */
-  .trip-header {
-    display:flex; justify-content:space-between; align-items:center;
-    margin-bottom:20px; gap:10px; flex-wrap:wrap;
-  }
-  .trip-header-left { display:flex; align-items:center; gap:10px; min-width:0; }
-  .trip-name-display { font-size:1.15rem; font-weight:700; color:#111; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .save-indicator { font-size:0.78rem; color:#9ca3af; white-space:nowrap; }
-  .save-indicator.saving { color:#f59e0b; }
-  .save-indicator.saved  { color:#16a34a; }
-  .trip-header-right { display:flex; gap:6px; align-items:center; flex-shrink:0; }
-
-  /* Share popover */
-  .share-popover-wrap { position:relative; }
-  .share-popover {
-    position:absolute; right:0; top:calc(100% + 6px);
-    background:#fff; border:1px solid #e5e7eb; border-radius:10px;
-    padding:14px; width:340px; z-index:100;
-    box-shadow:0 4px 16px rgba(0,0,0,0.1);
-  }
-  .share-row { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
-  .share-row:last-child { margin-bottom:0; }
-  .share-label { font-size:0.78rem; font-weight:600; color:#374151; white-space:nowrap; width:70px; flex-shrink:0; }
-  .share-url { font-size:0.72rem; color:#6b7280; background:#f9fafb; border:1px solid #e5e7eb; border-radius:6px; padding:4px 8px; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .copied-flash { color:#16a34a; font-size:0.75rem; font-weight:600; }
-
-  /* View-only banner */
-  .view-banner { background:#fffbeb; border:1px solid #fcd34d; border-radius:10px; padding:10px 16px; font-size:0.85rem; color:#78350f; font-weight:600; margin-bottom:16px; text-align:center; }
-
-  /* Modal */
-  .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:200; display:flex; align-items:center; justify-content:center; padding:16px; }
-  .modal-box { background:#fff; border-radius:14px; padding:24px; width:100%; max-width:380px; }
-  .modal-title { font-size:1.1rem; font-weight:700; margin-bottom:16px; }
-  .modal-actions { display:flex; gap:10px; justify-content:flex-end; margin-top:16px; }
-
-  /* Loading / Error / Setup */
-  .center-page { display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:60vh; text-align:center; gap:12px; }
-  .center-page h2 { font-size:1.2rem; font-weight:700; }
-  .center-page p { font-size:0.9rem; color:#6b7280; max-width:420px; line-height:1.6; }
-  .setup-steps { text-align:left; background:#fff; border:1px solid #e5e7eb; border-radius:10px; padding:16px 20px; max-width:480px; font-size:0.85rem; line-height:2; }
-  .setup-steps code { background:#f3f4f6; border-radius:4px; padding:1px 5px; font-family:monospace; font-size:0.82rem; }
-  .spinner { width:32px; height:32px; border:3px solid #e5e7eb; border-top-color:#2563eb; border-radius:50%; animation:spin 0.7s linear infinite; }
-  @keyframes spin { to { transform:rotate(360deg); } }
-
-  @media (max-width:480px) {
-    .row { flex-direction:column; }
-    .summary-bar { flex-direction:column; }
-    .result-table th:nth-child(2), .result-table td:nth-child(2) { display:none; }
-    .result-table th:nth-child(3), .result-table td:nth-child(3) { display:none; }
-    .share-popover { width:calc(100vw - 32px); right:-16px; }
-    .trip-header { flex-direction:column; align-items:flex-start; }
-  }
-</style>
+<title>Chia Tiền Nhóm 🌊</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
@@ -230,12 +48,15 @@
 
 <!-- ══ DASHBOARD ═════════════════════════════════════════════════════════ -->
 <div id="view-dashboard" class="app" style="display:none">
-  <div class="dash-header">
-    <div>
-      <h1>Chia Tiền Nhóm</h1>
-      <p class="subtitle">Chọn chuyến đi hoặc tạo mới.</p>
+  <div class="dash-hero">
+    <div class="dash-hero-content">
+      <h1>🌊 Chia Tiền Nhóm</h1>
+      <p class="subtitle">Quản lý chi phí chuyến đi dễ dàng</p>
+      <button class="btn btn-accent" onclick="openCreateModal()">+ Chuyến mới</button>
     </div>
-    <button class="btn btn-primary" onclick="openCreateModal()">+ Chuyến mới</button>
+    <svg class="wave-divider" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 44" preserveAspectRatio="none">
+      <path fill="rgba(240,249,255,0.95)" d="M0,22 C240,44 480,0 720,22 C960,44 1200,0 1440,22 L1440,44 L0,44 Z"/>
+    </svg>
   </div>
   <div id="trip-list"></div>
 </div>
@@ -381,7 +202,7 @@
     </div>
     <div class="nav-actions">
       <button class="btn btn-secondary" onclick="goStep(2)">← Sửa khoản chi</button>
-      <button class="btn btn-primary" onclick="exportToExcel()">⬇ Xuất Excel</button>
+      <button class="btn btn-primary" onclick="exportToExcel()">Xuất Excel</button>
     </div>
   </div>
 
@@ -511,9 +332,9 @@ function showDashboard() {
   if (trips.length === 0) {
     container.innerHTML = `
       <div class="center-page" style="min-height:40vh">
-        <div style="font-size:2.5rem">✈️</div>
+        <div style="font-size:2.5rem">🏖️</div>
         <h2>Chưa có chuyến đi nào</h2>
-        <p>Nhấn "+ Chuyến mới" để bắt đầu tạo chuyến chia tiền đầu tiên.</p>
+        <p>Nhấn "+ Chuyến mới" để bắt đầu chuyến chia tiền đầu tiên.</p>
       </div>`;
   } else {
     container.innerHTML = trips.map(t => {
@@ -1031,10 +852,10 @@ function renderResults() {
   const totalPaid = Object.values(paid).reduce((s,v) => s + v, 0);
 
   document.getElementById('summary-bar').innerHTML = `
-    <div class="summary-item"><div class="s-label">Tổng hóa đơn</div><div class="s-value">${fmt(totalBill)}</div></div>
-    <div class="summary-item"><div class="s-label">Tổng đã trả</div><div class="s-value">${fmt(totalPaid)}</div></div>
-    <div class="summary-item"><div class="s-label">Số khoản chi</div><div class="s-value">${state.expenses.length}</div></div>
-    <div class="summary-item"><div class="s-label">Thành viên</div><div class="s-value">${state.members.length} người</div></div>
+    <div class="summary-item summary-item--teal"><div class="s-label">Tổng hóa đơn</div><div class="s-value">${fmt(totalBill)}</div></div>
+    <div class="summary-item summary-item--green"><div class="s-label">Tổng đã trả</div><div class="s-value">${fmt(totalPaid)}</div></div>
+    <div class="summary-item summary-item--amber"><div class="s-label">Số khoản chi</div><div class="s-value">${state.expenses.length}</div></div>
+    <div class="summary-item summary-item--indigo"><div class="s-label">Thành viên</div><div class="s-value">${state.members.length} người</div></div>
   `;
 
   const netMap = {};
