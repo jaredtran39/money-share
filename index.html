@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Chia Tiền Nhóm 🌊</title>
+<title>Chia Tiền Nhóm 📝</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -181,6 +181,7 @@
   <!-- STEP 3 -->
   <div id="step-3" style="display:none">
     <div class="summary-bar" id="summary-bar"></div>
+    <div id="surplus-notice" style="display:none"></div>
     <div class="card">
       <div class="card-title">Kết quả</div>
       <table class="result-table">
@@ -202,7 +203,7 @@
     </div>
     <div class="nav-actions">
       <button class="btn btn-secondary" onclick="goStep(2)">← Sửa khoản chi</button>
-      <button class="btn btn-primary" onclick="exportToExcel()">Xuất Excel</button>
+      <button class="btn btn-primary" onclick="exportToExcel()">↓ Xuất Excel</button>
     </div>
   </div>
 
@@ -850,6 +851,9 @@ function renderResults() {
 
   const totalBill = state.expenses.reduce((s,e) => s + e.amount, 0);
   const totalPaid = Object.values(paid).reduce((s,v) => s + v, 0);
+  const surplus = totalPaid - totalBill;
+  const n = state.members.length || 1;
+  const surplusPerPerson = surplus / n;
 
   document.getElementById('summary-bar').innerHTML = `
     <div class="summary-item summary-item--teal"><div class="s-label">Tổng hóa đơn</div><div class="s-value">${fmt(totalBill)}</div></div>
@@ -858,10 +862,22 @@ function renderResults() {
     <div class="summary-item summary-item--indigo"><div class="s-label">Thành viên</div><div class="s-value">${state.members.length} người</div></div>
   `;
 
+  const noticeEl = document.getElementById('surplus-notice');
+  if (Math.abs(surplus) > 0.5) {
+    const isDue = surplus > 0;
+    noticeEl.className = isDue ? 'surplus-notice surplus-notice--surplus' : 'surplus-notice surplus-notice--deficit';
+    noticeEl.style.display = '';
+    noticeEl.innerHTML = isDue
+      ? `<strong>Quỹ dư ${fmt(surplus)}</strong> — Tổng đã trả nhiều hơn tổng hóa đơn <strong>${fmt(surplus)}</strong>. Số dư được chia đều, mỗi người được hoàn thêm <strong>${fmt(Math.round(surplusPerPerson))}</strong>.`
+      : `<strong>Còn thiếu ${fmt(-surplus)}</strong> — Tổng đã trả ít hơn tổng hóa đơn <strong>${fmt(-surplus)}</strong>. Phần thiếu chia đều, mỗi người cần bù thêm <strong>${fmt(Math.round(-surplusPerPerson))}</strong>.`;
+  } else {
+    noticeEl.style.display = 'none';
+  }
+
   const netMap = {};
   const tbody = document.getElementById('result-tbody');
   tbody.innerHTML = state.members.map(m => {
-    const net = Math.round((paid[m]||0) - owed[m]);
+    const net = Math.round((paid[m]||0) - owed[m] - surplusPerPerson);
     netMap[m] = net;
     const [badgeClass, label] = net > 0
       ? ['badge-positive', `Nhận lại ${fmt(net)}`]
@@ -927,10 +943,9 @@ function renderSuggestions(netMap) {
   }
 }
 
-// ══ EXPORT EXCEL ═══════════════════════════════════════════════════════
+// ══ EXPORT EXCEL (Accounting) ═══════════════════════════════════════════
 function exportToExcel() {
-  const owed = {};
-  const paid = {};
+  const owed = {}, paid = {};
   state.members.forEach(m => { owed[m] = 0; paid[m] = 0; });
   state.expenses.forEach(exp => {
     if (exp.participants.length === 0) return;
@@ -938,99 +953,276 @@ function exportToExcel() {
     exp.participants.forEach(p => { owed[p] = (owed[p]||0) + share; });
     exp.payers.forEach(p => { paid[p.who] = (paid[p.who]||0) + p.amount; });
   });
-  const totalBill    = state.expenses.reduce((s,e) => s + e.amount, 0);
-  const totalPaidAll = Object.values(paid).reduce((s,v) => s + v, 0);
 
   const wb = XLSX.utils.book_new();
-  const thin = { style:'thin', color:{ rgb:'D1D5DB' } };
-  const borders = { top:thin, bottom:thin, left:thin, right:thin };
-
-  function sTitle()  { return { font:{bold:true,sz:16,color:{rgb:'FFFFFF'}}, fill:{fgColor:{rgb:'1D4ED8'}}, alignment:{horizontal:'center',vertical:'center'} }; }
-  function sHeader() { return { font:{bold:true,sz:11,color:{rgb:'FFFFFF'}}, fill:{fgColor:{rgb:'2563EB'}}, alignment:{horizontal:'center',vertical:'center'}, border:borders }; }
-  function sLabel()  { return { font:{bold:true,sz:10}, fill:{fgColor:{rgb:'EFF6FF'}}, border:borders, alignment:{vertical:'center'} }; }
-  function sData(bg,align,bold) { return { font:bold?{bold:true,sz:10}:{sz:10}, fill:{fgColor:{rgb:bg||'FFFFFF'}}, alignment:{horizontal:align||'left',vertical:'center'}, border:borders }; }
-  function sNum(bg)  { return { font:{sz:10}, fill:{fgColor:{rgb:bg||'FFFFFF'}}, alignment:{horizontal:'right',vertical:'center'}, border:borders, numFmt:'#,##0' }; }
-  function sResult(net) {
-    const base = { alignment:{horizontal:'center',vertical:'center'}, border:borders };
-    if (net > 0) return { ...base, font:{bold:true,sz:10,color:{rgb:'166534'}}, fill:{fgColor:{rgb:'DCFCE7'}} };
-    if (net < 0) return { ...base, font:{bold:true,sz:10,color:{rgb:'991B1B'}}, fill:{fgColor:{rgb:'FEE2E2'}} };
-    return { ...base, font:{sz:10,color:{rgb:'6B7280'}}, fill:{fgColor:{rgb:'F3F4F6'}} };
-  }
-  function c(v,style) { return { v:v??'', t:typeof v==='number'?'n':'s', s:style }; }
-  function cn(v,style){ return { v, t:'n', s:style }; }
-  function blank(s)   { return { v:'', t:'s', s:s||{} }; }
-  function col(i)     { return String.fromCharCode(65+i); }
-
-  // Sheet 1: Kết quả
-  const ws1 = {};
   const exportDate = new Date().toLocaleDateString('vi-VN');
-  ws1['A1'] = c(`KẾT QUẢ: ${state.currentTripName}`, sTitle());
-  for (let i=1;i<6;i++) ws1[`${col(i)}1`] = blank(sTitle());
-  ws1['A2'] = c(`Xuất ngày: ${exportDate}`, {font:{italic:true,sz:10,color:{rgb:'6B7280'}},alignment:{horizontal:'center'}});
-  for (let i=1;i<6;i++) ws1[`${col(i)}2`] = blank();
-  ws1['A4'] = c('Tổng hóa đơn:', sLabel()); ws1['B4'] = cn(totalBill, sNum());
-  ws1['C4'] = c('Tổng đã trả:',  sLabel()); ws1['D4'] = cn(totalPaidAll, sNum());
-  ws1['E4'] = c('Số thành viên:', sLabel()); ws1['F4'] = c(`${state.members.length} người`, sData('EFF6FF','center'));
-  ['STT','Tên','Phần phải trả (đ)','Đã trả (đ)','Chênh lệch (đ)','Trạng thái']
-    .forEach((h,i) => { ws1[`${col(i)}6`] = c(h,sHeader()); });
-  state.members.forEach((m,i) => {
-    const r = 7+i;
-    const net = Math.round((paid[m]||0) - owed[m]);
-    const bg = i%2===0?'FFFFFF':'F9FAFB';
-    const rs = sResult(net);
-    const label = net>0?`Nhận lại ${Math.abs(net).toLocaleString('vi-VN')}đ`:net<0?`Cần trả ${Math.abs(net).toLocaleString('vi-VN')}đ`:'Huề';
-    ws1[`A${r}`]=cn(i+1,sData(bg,'center')); ws1[`B${r}`]=c(m,sData(bg,'left',true));
-    ws1[`C${r}`]=cn(Math.round(owed[m]),sNum(bg)); ws1[`D${r}`]=cn(Math.round(paid[m]||0),sNum(bg));
-    ws1[`E${r}`]={v:net,t:'n',s:{...rs,numFmt:'+#,##0;-#,##0;0'}}; ws1[`F${r}`]=c(label,rs);
+  const thin   = { style:'thin',   color:{rgb:'D1D5DB'} };
+  const medium = { style:'medium', color:{rgb:'94A3B8'} };
+  const bAll   = { top:thin,   bottom:thin,   left:thin, right:thin };
+  const bTop   = { top:medium, bottom:thin,   left:thin, right:thin };
+
+  const S = {
+    title:      { font:{bold:true,sz:14,color:{rgb:'FFFFFF'}},   fill:{fgColor:{rgb:'1D4E89'}}, alignment:{horizontal:'center',vertical:'center'} },
+    subtitle:   { font:{italic:true,sz:9,color:{rgb:'6B7280'}},  fill:{fgColor:{rgb:'FFFFFF'}}, alignment:{horizontal:'center'} },
+    hdr:        { font:{bold:true,sz:10,color:{rgb:'FFFFFF'}},   fill:{fgColor:{rgb:'2B6CB0'}}, alignment:{horizontal:'center',vertical:'center'}, border:bAll },
+    voucher:    { font:{bold:true,sz:10,color:{rgb:'0C4A6E'}},   fill:{fgColor:{rgb:'EBF8FF'}}, border:bAll, alignment:{vertical:'center'} },
+    dr:         { font:{sz:10,color:{rgb:'92400E'}},             fill:{fgColor:{rgb:'FFF3E0'}}, border:bAll, alignment:{horizontal:'right',vertical:'center'}, numFmt:'#,##0;-#,##0;' },
+    cr:         { font:{sz:10,color:{rgb:'14532D'}},             fill:{fgColor:{rgb:'E8F5E9'}}, border:bAll, alignment:{horizontal:'right',vertical:'center'}, numFmt:'#,##0;-#,##0;' },
+    sub:        { font:{bold:true,sz:10,color:{rgb:'1E293B'}},   fill:{fgColor:{rgb:'F1F5F9'}}, border:bAll, alignment:{horizontal:'right',vertical:'center'}, numFmt:'#,##0' },
+    subLbl:     { font:{bold:true,sz:10,color:{rgb:'1E293B'}},   fill:{fgColor:{rgb:'F1F5F9'}}, border:bAll, alignment:{horizontal:'left',vertical:'center'} },
+    grand:      { font:{bold:true,sz:11,color:{rgb:'0F172A'}},   fill:{fgColor:{rgb:'E2E8F0'}}, border:bTop, alignment:{horizontal:'right',vertical:'center'}, numFmt:'#,##0' },
+    grandLbl:   { font:{bold:true,sz:11,color:{rgb:'0F172A'}},   fill:{fgColor:{rgb:'E2E8F0'}}, border:bTop, alignment:{horizontal:'right',vertical:'center'} },
+    member:     { font:{bold:true,sz:12,color:{rgb:'FFFFFF'}},   fill:{fgColor:{rgb:'0E7490'}}, alignment:{horizontal:'left',vertical:'center'} },
+    mTotal:     { font:{bold:true,sz:10,color:{rgb:'0C4A6E'}},   fill:{fgColor:{rgb:'F0F9FF'}}, border:bTop, alignment:{horizontal:'right',vertical:'center'}, numFmt:'#,##0' },
+    mTotalLbl:  { font:{bold:true,sz:10,color:{rgb:'0C4A6E'}},   fill:{fgColor:{rgb:'F0F9FF'}}, border:bTop, alignment:{horizontal:'left',vertical:'center'} },
+    label:      { font:{bold:true,sz:10,color:{rgb:'374151'}},   fill:{fgColor:{rgb:'F9FAFB'}}, border:bAll, alignment:{vertical:'center'} },
+    note:       { font:{italic:true,sz:9,color:{rgb:'6B7280'}},  fill:{fgColor:{rgb:'F9FAFB'}}, border:bAll, alignment:{vertical:'center'} },
+    bal:        { font:{sz:10,color:{rgb:'0C4A6E'}},             fill:{fgColor:{rgb:'F0F9FF'}}, border:bAll, alignment:{horizontal:'right',vertical:'center'}, numFmt:'#,##0;-#,##0;0' },
+  };
+  function sData(bg)       { return { font:{sz:10,color:{rgb:'374151'}},             fill:{fgColor:{rgb:bg||'FFFFFF'}}, border:bAll, alignment:{vertical:'center'} }; }
+  function sDataC(bg)      { return { font:{sz:10,color:{rgb:'374151'}},             fill:{fgColor:{rgb:bg||'FFFFFF'}}, border:bAll, alignment:{horizontal:'center',vertical:'center'} }; }
+  function sNet(net)       { const b={border:bAll,alignment:{horizontal:'right',vertical:'center'},numFmt:'#,##0;-#,##0;0'}; if(net>0)return{...b,font:{bold:true,sz:10,color:{rgb:'166534'}},fill:{fgColor:{rgb:'DCFCE7'}}}; if(net<0)return{...b,font:{bold:true,sz:10,color:{rgb:'991B1B'}},fill:{fgColor:{rgb:'FEE2E2'}}}; return{...b,font:{sz:10,color:{rgb:'6B7280'}},fill:{fgColor:{rgb:'F3F4F6'}}}; }
+  function sStatus(net)    { const b={border:bAll,alignment:{horizontal:'center',vertical:'center'}}; if(net>0)return{...b,font:{bold:true,sz:10,color:{rgb:'166534'}},fill:{fgColor:{rgb:'DCFCE7'}}}; if(net<0)return{...b,font:{bold:true,sz:10,color:{rgb:'991B1B'}},fill:{fgColor:{rgb:'FEE2E2'}}}; return{...b,font:{sz:10,color:{rgb:'6B7280'}},fill:{fgColor:{rgb:'F3F4F6'}}}; }
+  function cs(v,s)         { return { v:v??'', t:'s', s }; }
+  function cn(v,s)         { return { v, t:'n', s }; }
+  function cf(v,f,s)       { return { v, f, t:'n', s }; }
+  function blank(s)        { return { v:'', t:'s', s:s||{} }; }
+  function L(i)            { return String.fromCharCode(65+i); }
+
+  // ── SHEET 1: Journal ───────────────────────────────────────────────────
+  const ws1={}, m1=[];
+  let r=1;
+
+  ws1[`A${r}`]=cs(`EXPENSE JOURNAL — ${state.currentTripName}`,S.title);
+  for(let i=1;i<6;i++) ws1[`${L(i)}${r}`]=blank(S.title);
+  m1.push({s:{r:r-1,c:0},e:{r:r-1,c:5}}); r++;
+
+  ws1[`A${r}`]=cs(`Exported: ${exportDate}   |   ${state.expenses.length} vouchers   |   ${state.members.length} members`,S.subtitle);
+  for(let i=1;i<6;i++) ws1[`${L(i)}${r}`]=blank(S.subtitle);
+  m1.push({s:{r:r-1,c:0},e:{r:r-1,c:5}}); r++;
+
+  r++; // blank row
+
+  ['#','Voucher','Date','Description','Debit (Dr)','Credit (Cr)'].forEach((h,i)=>{ ws1[`${L(i)}${r}`]=cs(h,S.hdr); });
+  r++;
+
+  const drSubs=[], crSubs=[];
+
+  state.expenses.forEach((exp,idx)=>{
+    const vn=`CT-${String(idx+1).padStart(3,'0')}`;
+    const bg=idx%2===0?'FFFFFF':'F9FAFB';
+
+    // Voucher header row
+    ws1[`A${r}`]=cn(idx+1,S.voucher); ws1[`B${r}`]=cs(vn,S.voucher); ws1[`C${r}`]=cs(fmtDate(exp.date),S.voucher);
+    ws1[`D${r}`]=cs(`${exp.name}  [${exp.type==='prepay'?'Advance/Fund':'Normal'}]  —  Total: ${Math.round(exp.amount).toLocaleString('vi-VN')}`,S.voucher);
+    ws1[`E${r}`]=blank(S.voucher); ws1[`F${r}`]=blank(S.voucher); r++;
+
+    // Credit rows (payers) — source data, no formula needed
+    const crCells=[];
+    const payers=exp.payers.length?exp.payers:[{who:'(unrecorded)',amount:exp.amount}];
+    payers.forEach(p=>{
+      ws1[`A${r}`]=blank(sData(bg)); ws1[`B${r}`]=blank(sData(bg)); ws1[`C${r}`]=blank(sData(bg));
+      ws1[`D${r}`]=cs(`  ↳ ${p.who} – advance paid`,sData(bg));
+      ws1[`E${r}`]=cn(0,S.dr);           // Dr = 0 (hidden by numFmt)
+      ws1[`F${r}`]=cn(p.amount,S.cr);    // Cr = actual amount paid
+      crCells.push(`F${r}`); r++;
+    });
+
+    // Debit rows (participants) — formula: total paid ÷ number of persons
+    const drCells=[];
+    const count=exp.participants.length||1;
+    const shareFormula=crCells.length===1
+      ? `${crCells[0]}/${count}`
+      : `(SUM(${crCells[0]}:${crCells[crCells.length-1]}))/${count}`;
+    exp.participants.forEach(p=>{
+      ws1[`A${r}`]=blank(sData(bg)); ws1[`B${r}`]=blank(sData(bg)); ws1[`C${r}`]=blank(sData(bg));
+      ws1[`D${r}`]=cs(`  ↳ ${p} – cost share  (÷ ${count} persons)`,sData(bg));
+      ws1[`E${r}`]=cf(exp.amount/count,shareFormula,S.dr);  // Dr = formula
+      ws1[`F${r}`]=cn(0,S.cr);                              // Cr = 0 (hidden)
+      drCells.push(`E${r}`); r++;
+    });
+
+    // Subtotal row — SUM formulas prove Dr = Cr
+    const drSubCell=`E${r}`, crSubCell=`F${r}`;
+    drSubs.push(drSubCell); crSubs.push(crSubCell);
+    ws1[`A${r}`]=blank(S.sub); ws1[`B${r}`]=blank(S.sub); ws1[`C${r}`]=blank(S.sub);
+    ws1[`D${r}`]=cs(`Subtotal ${vn}`,S.subLbl);
+    ws1[`E${r}`]=drCells.length ? cf(exp.amount,`SUM(${drCells[0]}:${drCells[drCells.length-1]})`,S.sub) : cn(exp.amount,S.sub);
+    ws1[`F${r}`]=crCells.length===1 ? cf(exp.amount,crCells[0],S.sub) : cf(exp.amount,`SUM(${crCells[0]}:${crCells[crCells.length-1]})`,S.sub);
+    r++;
+
+    r++; // blank separator
   });
-  const lr1 = 6+state.members.length;
-  ws1['!ref']=`A1:F${lr1}`; ws1['!merges']=[{s:{r:0,c:0},e:{r:0,c:5}},{s:{r:1,c:0},e:{r:1,c:5}}];
-  ws1['!cols']=[{wch:5},{wch:18},{wch:20},{wch:16},{wch:18},{wch:24}];
-  ws1['!rows']=[{hpt:34},{hpt:16}];
-  XLSX.utils.book_append_sheet(wb, ws1, 'Kết quả');
 
-  // Sheet 2: Chi tiết
-  const ws2 = {};
-  ws2['A1'] = c('CHI TIẾT KHOẢN CHI', sTitle());
-  for (let i=1;i<7;i++) ws2[`${col(i)}1`] = blank(sTitle());
-  ['STT','Loại','Tên khoản chi','Ngày','Tổng tiền (đ)','Người tham gia','Người đã trả']
-    .forEach((h,i) => { ws2[`${col(i)}3`] = c(h,sHeader()); });
-  state.expenses.forEach((exp,i) => {
-    const r = 4+i;
-    const bg = i%2===0?'FFFFFF':'F9FAFB';
-    const payerStr = exp.payers.length ? exp.payers.map(p=>`${p.who}: ${Math.round(p.amount).toLocaleString('vi-VN')}đ`).join(' | ') : 'Chưa ai trả';
-    const typeLabel = exp.type==='prepay'?'Trả trước / Góp quỹ':'Thông thường';
-    const typeBg = exp.type==='prepay'?'FEF9C3':bg;
-    ws2[`A${r}`]=cn(i+1,sData(bg,'center')); ws2[`B${r}`]=c(typeLabel,sData(typeBg,'center'));
-    ws2[`C${r}`]=c(exp.name,sData(bg,'left',true)); ws2[`D${r}`]=c(fmtDate(exp.date),sData(bg,'center'));
-    ws2[`E${r}`]=cn(exp.amount,sNum(bg)); ws2[`F${r}`]=c(exp.participants.join(', '),sData(bg));
-    ws2[`G${r}`]=c(payerStr,sData(bg));
+  // Grand total — SUM of all voucher subtotals
+  const totAll=state.expenses.reduce((s,e)=>s+e.amount,0);
+  ws1[`A${r}`]=blank(S.grand); ws1[`B${r}`]=blank(S.grand); ws1[`C${r}`]=blank(S.grand);
+  ws1[`D${r}`]=cs('GRAND TOTAL',S.grandLbl);
+  ws1[`E${r}`]=drSubs.length?cf(totAll,`SUM(${drSubs.join(',')})`,S.grand):cn(totAll,S.grand);
+  ws1[`F${r}`]=crSubs.length?cf(totAll,`SUM(${crSubs.join(',')})`,S.grand):cn(totAll,S.grand);
+
+  ws1['!ref']=`A1:F${r}`; ws1['!merges']=m1;
+  ws1['!cols']=[{wch:5},{wch:12},{wch:12},{wch:44},{wch:18},{wch:18}];
+  ws1['!rows']=[{hpt:30},{hpt:16}];
+  XLSX.utils.book_append_sheet(wb,ws1,'Journal');
+
+  // ── SHEET 2: Member Ledger ──────────────────────────────────────────────
+  const ws2={}, m2=[];
+  r=1;
+
+  ws2[`A${r}`]=cs(`MEMBER LEDGER — ${state.currentTripName}`,S.title);
+  for(let i=1;i<7;i++) ws2[`${L(i)}${r}`]=blank(S.title);
+  m2.push({s:{r:r-1,c:0},e:{r:r-1,c:6}}); r++;
+  r++; // blank
+
+  state.members.forEach(m=>{
+    const mNet=Math.round((paid[m]||0)-owed[m]);
+
+    // Member account header
+    ws2[`A${r}`]=cs(`ACCOUNT: ${m}`,S.member);
+    for(let i=1;i<7;i++) ws2[`${L(i)}${r}`]=blank(S.member);
+    m2.push({s:{r:r-1,c:0},e:{r:r-1,c:6}}); r++;
+
+    ['Date','Voucher','Description','Dr (Owed)','Cr (Paid)','Balance',''].forEach((h,i)=>{ ws2[`${L(i)}${r}`]=cs(h,S.hdr); }); r++;
+
+    // Opening balance = 0
+    const openRow=r;
+    ws2[`A${r}`]=cs('Opening Balance',sData('F9FAFB'));
+    for(let i=1;i<4;i++) ws2[`${L(i)}${r}`]=blank(sData('F9FAFB'));
+    ws2[`D${r}`]=cn(0,{...S.dr,numFmt:'#,##0;-#,##0;'}); ws2[`E${r}`]=cn(0,{...S.cr,numFmt:'#,##0;-#,##0;'});
+    ws2[`F${r}`]=cf(0,'0',S.bal); ws2[`G${r}`]=blank(sData('F9FAFB')); r++;
+
+    // Build this member's transactions sorted by date
+    const txns=[];
+    state.expenses.forEach((exp,expIdx)=>{
+      const vn=`CT-${String(expIdx+1).padStart(3,'0')}`;
+      const count=exp.participants.length||1;
+      const shareVal=exp.amount/count;
+      if(exp.participants.includes(m))
+        txns.push({date:exp.date,vn,desc:`Cost share: ${exp.name}  (÷ ${count} persons)`,dr:shareVal,drF:`${Math.round(exp.amount)}/${count}`,cr:0});
+      const pe=exp.payers.find(p=>p.who===m);
+      if(pe) txns.push({date:exp.date,vn,desc:`Paid for: ${exp.name}`,dr:0,cr:pe.amount});
+    });
+    txns.sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+
+    const txRowNums=[];
+    let prevBalRow=openRow, runBal=0;
+
+    txns.forEach((tx,txIdx)=>{
+      const bg=txIdx%2===0?'FFFFFF':'F9FAFB';
+      const drCell=`D${r}`, crCell=`E${r}`, balCell=`F${r}`;
+      runBal+=tx.cr-tx.dr;
+      ws2[`A${r}`]=cs(fmtDate(tx.date),sData(bg)); ws2[`B${r}`]=cs(tx.vn,sDataC(bg)); ws2[`C${r}`]=cs(tx.desc,sData(bg));
+      // Dr cell: formula if cost share, else 0 (hidden)
+      ws2[drCell]=tx.dr>0 ? cf(tx.dr,tx.drF,S.dr) : cn(0,{...S.dr,numFmt:'#,##0;-#,##0;'});
+      // Cr cell: actual value if payer, else 0 (hidden)
+      ws2[crCell]=tx.cr>0 ? cn(tx.cr,S.cr)         : cn(0,{...S.cr,numFmt:'#,##0;-#,##0;'});
+      // Balance = previous balance + Cr - Dr
+      ws2[balCell]=cf(runBal,`F${prevBalRow}+${crCell}-${drCell}`,S.bal);
+      ws2[`G${r}`]=blank(sData(bg));
+      txRowNums.push(r); prevBalRow=r; r++;
+    });
+
+    if(!txns.length){
+      ws2[`A${r}`]=cs('(no transactions)',sData('FFFFFF'));
+      for(let i=1;i<7;i++) ws2[`${L(i)}${r}`]=blank(sData('FFFFFF')); r++;
+    }
+
+    // Totals row — SUM formulas
+    const dS=txRowNums.length?`D${txRowNums[0]}`:null, dE=txRowNums.length?`D${txRowNums[txRowNums.length-1]}`:null;
+    const eS=txRowNums.length?`E${txRowNums[0]}`:null, eE=txRowNums.length?`E${txRowNums[txRowNums.length-1]}`:null;
+    ws2[`A${r}`]=cs('TOTAL',S.mTotalLbl); ws2[`B${r}`]=blank(S.mTotal); ws2[`C${r}`]=blank(S.mTotal);
+    ws2[`D${r}`]=dS?cf(Math.round(owed[m]),`SUM(${dS}:${dE})`,S.mTotal):cn(0,S.mTotal);
+    ws2[`E${r}`]=eS?cf(Math.round(paid[m]||0),`SUM(${eS}:${eE})`,S.mTotal):cn(0,S.mTotal);
+    ws2[`F${r}`]=cf(mNet,`F${prevBalRow}`,{...S.mTotal,numFmt:'#,##0;-#,##0;0'});
+    const stxt=mNet>0?`Receive back ${Math.abs(mNet).toLocaleString('vi-VN')}`:mNet<0?`Still owes ${Math.abs(mNet).toLocaleString('vi-VN')}`:'Settled';
+    ws2[`G${r}`]=cs(stxt,sStatus(mNet)); r++;
+
+    r+=2; // separator between members
   });
-  const lr2 = 3+state.expenses.length;
-  ws2['!ref']=`A1:G${lr2}`; ws2['!merges']=[{s:{r:0,c:0},e:{r:0,c:6}}];
-  ws2['!cols']=[{wch:5},{wch:20},{wch:22},{wch:14},{wch:18},{wch:28},{wch:40}];
-  ws2['!rows']=[{hpt:34}];
-  XLSX.utils.book_append_sheet(wb, ws2, 'Chi tiết khoản chi');
 
-  // Sheet 3: Giao dịch gợi ý
-  const netMap3 = {};
-  state.members.forEach(m => netMap3[m] = Math.round((paid[m]||0) - owed[m]));
-  const cr3 = Object.entries(netMap3).filter(([,v])=>v>0.5).sort((a,b)=>b[1]-a[1]);
-  const db3 = Object.entries(netMap3).filter(([,v])=>v<-0.5).sort((a,b)=>a[1]-b[1]);
-  const C3=[...cr3.map(([n,v])=>[n,v])], D3=[...db3.map(([n,v])=>[n,v])], txns3=[];
-  while(C3.length&&D3.length){const amt=Math.min(C3[0][1],-D3[0][1]);txns3.push({from:D3[0][0],to:C3[0][0],amount:Math.round(amt)});C3[0][1]-=amt;D3[0][1]+=amt;if(Math.abs(C3[0][1])<0.5)C3.shift();if(Math.abs(D3[0][1])<0.5)D3.shift();}
-  const ws3 = {};
-  ws3['A1']=c('GIAO DỊCH GỢI Ý',sTitle()); ['B1','C1','D1'].forEach(k=>ws3[k]=blank(sTitle()));
-  ws3['A2']=c(`Tối thiểu ${txns3.length} giao dịch`,{font:{italic:true,sz:10,color:{rgb:'6B7280'}},alignment:{horizontal:'center'}});
-  ['B2','C2','D2'].forEach(k=>ws3[k]=blank());
-  ['STT','Người chuyển','Người nhận','Số tiền (đ)'].forEach((h,i)=>{ws3[`${col(i)}4`]=c(h,sHeader());});
-  txns3.forEach((t,i)=>{const r=5+i,bg=i%2===0?'FFFFFF':'F9FAFB';ws3[`A${r}`]=cn(i+1,sData(bg,'center'));ws3[`B${r}`]=c(t.from,sData(bg,'left',true));ws3[`C${r}`]=c(t.to,sData(bg,'left',true));ws3[`D${r}`]=cn(t.amount,sNum(bg));});
-  const lr3=txns3.length>0?4+txns3.length:5;
-  ws3['!ref']=`A1:D${lr3}`; ws3['!merges']=[{s:{r:0,c:0},e:{r:0,c:3}},{s:{r:1,c:0},e:{r:1,c:3}}];
-  ws3['!cols']=[{wch:5},{wch:20},{wch:20},{wch:18}]; ws3['!rows']=[{hpt:34},{hpt:16}];
-  XLSX.utils.book_append_sheet(wb, ws3, 'Giao dịch gợi ý');
+  ws2['!ref']=`A1:G${r}`; ws2['!merges']=m2;
+  ws2['!cols']=[{wch:12},{wch:12},{wch:40},{wch:18},{wch:18},{wch:18},{wch:24}];
+  ws2['!rows']=[{hpt:30}];
+  XLSX.utils.book_append_sheet(wb,ws2,'Member Ledger');
 
-  XLSX.writeFile(wb, `chia-tien-${state.currentTripName.replace(/\s+/g,'-')}-${exportDate.replace(/\//g,'-')}.xlsx`);
+  // ── SHEET 3: Settlement ────────────────────────────────────────────────
+  const ws3={}, m3=[];
+  r=1;
+
+  ws3[`A${r}`]=cs(`SETTLEMENT — ${state.currentTripName}`,S.title);
+  for(let i=1;i<6;i++) ws3[`${L(i)}${r}`]=blank(S.title);
+  m3.push({s:{r:r-1,c:0},e:{r:r-1,c:5}}); r++; r++;
+
+  // Part A: Balance summary
+  ws3[`A${r}`]=cs('BALANCE SUMMARY',{...S.title,font:{bold:true,sz:12,color:{rgb:'FFFFFF'}}});
+  for(let i=1;i<6;i++) ws3[`${L(i)}${r}`]=blank(S.title);
+  m3.push({s:{r:r-1,c:0},e:{r:r-1,c:5}}); r++;
+
+  ['#','Member','Total Dr (Owed)','Total Cr (Paid)','Net Balance','Status'].forEach((h,i)=>{ ws3[`${L(i)}${r}`]=cs(h,S.hdr); }); r++;
+
+  const sumStart=r;
+  state.members.forEach((m,idx)=>{
+    const net=Math.round((paid[m]||0)-owed[m]);
+    const bg=idx%2===0?'FFFFFF':'F9FAFB';
+    ws3[`A${r}`]=cn(idx+1,sDataC(bg));
+    ws3[`B${r}`]=cs(m,{...sData(bg),font:{bold:true,sz:10,color:{rgb:'374151'}}});
+    ws3[`C${r}`]=cn(Math.round(owed[m]),{...S.dr,fill:{fgColor:{rgb:'FFF3E0'}},numFmt:'#,##0'});
+    ws3[`D${r}`]=cn(Math.round(paid[m]||0),{...S.cr,fill:{fgColor:{rgb:'E8F5E9'}},numFmt:'#,##0'});
+    ws3[`E${r}`]=cf(net,`D${r}-C${r}`,sNet(net));  // Net = Cr - Dr (formula)
+    const stxt=net>0?`Receive back ${Math.abs(net).toLocaleString('vi-VN')}`:net<0?`Still owes ${Math.abs(net).toLocaleString('vi-VN')}`:'Settled';
+    ws3[`F${r}`]=cs(stxt,sStatus(net)); r++;
+  });
+  const sumEnd=r-1;
+
+  // Totals — SUM formulas; Net sum must = 0
+  const tDr=Object.values(owed).reduce((s,v)=>s+Math.round(v),0);
+  const tCr=Object.values(paid).reduce((s,v)=>s+Math.round(v),0);
+  ws3[`A${r}`]=blank(S.grand); ws3[`B${r}`]=cs('TOTAL',S.grandLbl);
+  ws3[`C${r}`]=cf(tDr,`SUM(C${sumStart}:C${sumEnd})`,S.grand);
+  ws3[`D${r}`]=cf(tCr,`SUM(D${sumStart}:D${sumEnd})`,S.grand);
+  ws3[`E${r}`]=cf(0,`SUM(E${sumStart}:E${sumEnd})`,{...S.grand,fill:{fgColor:{rgb:'DCFCE7'}},font:{bold:true,sz:11,color:{rgb:'166534'}}});
+  ws3[`F${r}`]=cs('must = 0',{...S.note,fill:{fgColor:{rgb:'DCFCE7'}},border:bTop,font:{italic:true,sz:9,color:{rgb:'166534'}}}); r++;
+
+  // Double-entry identity note
+  ws3[`A${r}`]=cs('Double-entry check:',S.label);
+  ws3[`B${r}`]=cs('ΣDebit = ΣCredit  →  Net Balance column sums to zero (fundamental accounting identity)',S.note);
+  m3.push({s:{r:r-1,c:1},e:{r:r-1,c:5}}); r+=2;
+
+  // Part B: Settlement transactions (greedy min-transfers)
+  const netMap={};
+  state.members.forEach(m=>netMap[m]=Math.round((paid[m]||0)-owed[m]));
+  const crArr=Object.entries(netMap).filter(([,v])=>v>0.5).sort((a,b)=>b[1]-a[1]);
+  const dbArr=Object.entries(netMap).filter(([,v])=>v<-0.5).sort((a,b)=>a[1]-b[1]);
+  const CA=crArr.map(([n,v])=>[n,v]), DA=dbArr.map(([n,v])=>[n,v]), txnsOut=[];
+  while(CA.length&&DA.length){const a=Math.min(CA[0][1],-DA[0][1]);txnsOut.push({from:DA[0][0],to:CA[0][0],amount:Math.round(a)});CA[0][1]-=a;DA[0][1]+=a;if(Math.abs(CA[0][1])<0.5)CA.shift();if(Math.abs(DA[0][1])<0.5)DA.shift();}
+
+  ws3[`A${r}`]=cs(`SETTLEMENT TRANSACTIONS — ${txnsOut.length} transfer${txnsOut.length!==1?'s':''} needed`,{...S.title,font:{bold:true,sz:12,color:{rgb:'FFFFFF'}}});
+  for(let i=1;i<6;i++) ws3[`${L(i)}${r}`]=blank(S.title);
+  m3.push({s:{r:r-1,c:0},e:{r:r-1,c:5}}); r++;
+
+  if(!txnsOut.length){
+    ws3[`A${r}`]=cs('All accounts settled — no transfers needed',{font:{italic:true,sz:11,color:{rgb:'166534'}},fill:{fgColor:{rgb:'DCFCE7'}},alignment:{horizontal:'center',vertical:'center'},border:bAll});
+    m3.push({s:{r:r-1,c:0},e:{r:r-1,c:5}}); r++;
+  } else {
+    ['#','Payer (Dr)','Payee (Cr)','Amount','Description',''].forEach((h,i)=>{ ws3[`${L(i)}${r}`]=cs(h,S.hdr); }); r++;
+    txnsOut.forEach((t,i)=>{
+      const bg=i%2===0?'FFFFFF':'F9FAFB';
+      ws3[`A${r}`]=cn(i+1,sDataC(bg));
+      ws3[`B${r}`]=cs(t.from,{...sData(bg),fill:{fgColor:{rgb:'FFF3E0'}},font:{bold:true,sz:10,color:{rgb:'92400E'}}});
+      ws3[`C${r}`]=cs(t.to,  {  ...sData(bg),fill:{fgColor:{rgb:'E8F5E9'}},font:{bold:true,sz:10,color:{rgb:'14532D'}}});
+      ws3[`D${r}`]=cn(t.amount,{...S.dr,numFmt:'#,##0',fill:{fgColor:{rgb:'EFF6FF'}},font:{bold:true,sz:10,color:{rgb:'1D4E89'}}});
+      ws3[`E${r}`]=cs(`${t.from} transfers to ${t.to} – debt settlement`,sData(bg));
+      ws3[`F${r}`]=blank(sData(bg)); r++;
+    });
+  }
+
+  ws3['!ref']=`A1:F${r}`; ws3['!merges']=m3;
+  ws3['!cols']=[{wch:5},{wch:20},{wch:18},{wch:18},{wch:18},{wch:34}];
+  ws3['!rows']=[{hpt:30}];
+  XLSX.utils.book_append_sheet(wb,ws3,'Settlement');
+
+  XLSX.writeFile(wb,`accounting-${state.currentTripName.replace(/\s+/g,'-')}-${exportDate.replace(/\//g,'-')}.xlsx`);
 }
 
 // ══ INIT ═══════════════════════════════════════════════════════════════

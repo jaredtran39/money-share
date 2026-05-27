@@ -267,6 +267,18 @@ input:disabled, select:disabled {
   border-radius: var(--radius-sm); font-size: 0.83rem; color: #78350f; line-height: 1.7;
 }
 .suggestion-alt strong { color: #92400e; }
+.surplus-notice {
+  margin-bottom: 12px; padding: 10px 14px;
+  border-radius: var(--radius-sm); font-size: 0.83rem; line-height: 1.6;
+}
+.surplus-notice--surplus {
+  background: #f0fdf4; border: 1px solid #86efac; color: #14532d;
+}
+.surplus-notice--surplus strong { color: #166534; }
+.surplus-notice--deficit {
+  background: #fef2f2; border: 1px solid #fca5a5; color: #7f1d1d;
+}
+.surplus-notice--deficit strong { color: #991b1b; }
 
 /* ══ MISC ════════════════════════════════════════════════════════════════ */
 .empty      { text-align: center; color: var(--text-muted); padding: 24px; font-size: 0.88rem; }
